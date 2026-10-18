@@ -2,12 +2,12 @@
 __pycache__/
 *.py[cod]
 
-# Entornos virtuales
+
 .venv/
 venv/
 env/
 
-# Secretos y credenciales
+# Credenciales
 .env
 credenciales.txt
 
