@@ -1,0 +1,5 @@
+Django>=5.1,<6.0
+psycopg2-binary
+python-decouple
+dj-database-url
+Pillow

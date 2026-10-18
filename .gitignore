@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Secretos y credenciales
+.env
+credenciales.txt
+
+# Base de datos y archivos generados
+db.sqlite3
+staticfiles/
+media/
+*.log
+
+# Editor / sistema operativo
+.vscode/
+.DS_Store
