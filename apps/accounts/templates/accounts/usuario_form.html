@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h3 class="mb-3">{{ titulo }}</h3>
+
+{% if es_el_mismo %}
+<div class="alert alert-info col-md-6">
+    Tu contraseña no se puede cambiar desde aquí.
+</div>
+{% endif %}
+
+<form method="post" class="col-md-6">
+    {% csrf_token %}
+    {% include "_form_fields.html" %}
+    <button type="submit" class="btn btn-primary">Guardar</button>
+    <a href="{% url 'lista_usuarios' %}" class="btn btn-outline-secondary">Cancelar</a>
+</form>
+{% endblock %}

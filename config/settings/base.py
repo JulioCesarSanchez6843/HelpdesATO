@@ -89,7 +89,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LOGIN_URL = "login"
-LOGIN_REDIRECT_URL = "lista_tickets"
+LOGIN_REDIRECT_URL = "lista_usuarios"
 
 BREVO_API_KEY = config("BREVO_API_KEY", default="")
 EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
