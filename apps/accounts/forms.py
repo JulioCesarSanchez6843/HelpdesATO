@@ -31,7 +31,7 @@ class _UsuarioBaseForm(BootstrapFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["area"].required = True
+        self.fields["area"].required = False
         self.fields["puesto"].required = False
         self.fields["correo"].required = True
         self.fields["correo"].error_messages["required"] = "El correo es obligatorio."
