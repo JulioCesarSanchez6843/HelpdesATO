@@ -17,9 +17,14 @@
                 <a class="nav-link" href="{% url 'lista_areas' %}">Áreas</a>
                 <a class="nav-link" href="{% url 'lista_categorias' %}">Categorías</a>
                 <a class="nav-link" href="{% url 'lista_puestos' %}">Puestos</a>
+            {% else %}
+                <a class="nav-link" href="{% url 'lista_tickets' %}">Mis Tickets</a>
             {% endif %}
         </div>
         <div class="navbar-nav align-items-center">
+            <a class="nav-link" href="{% url 'lista_notificaciones' %}" title="Notificaciones">
+                🔔{% if notificaciones_sin_leer %}<span class="badge rounded-pill bg-danger">{{ notificaciones_sin_leer }}</span>{% endif %}
+            </a>
             <span class="navbar-text mx-2">{{ user.nombre }}</span>
             <form method="post" action="{% url 'logout' %}" class="d-inline">
                 {% csrf_token %}

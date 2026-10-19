@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="mb-3">
+
+    <h3 class="mb-0">
+        Panel de administración
+    </h3>
+
+    <p class="text-muted mb-0">
+        Gestiona todos los tickets del sistema.
+    </p>
+
+</div>
+
+<div class="row g-3 mb-3">
+
+    <div class="col-6 col-md">
+
+        <a
+            href="{% url 'lista_tickets' %}"
+            class="text-decoration-none"
+        >
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h3 class="mb-0 text-secondary">
+                        {{ conteos.total }}
+                    </h3>
+
+                    <small class="text-muted">
+                        Total
+                    </small>
+
+                </div>
+
+            </div>
+
+        </a>
+
+    </div>
+
+    <div class="col-6 col-md">
+
+        <a
+            href="?estado=ABIERTO"
+            class="text-decoration-none"
+        >
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h3 class="mb-0 text-primary">
+                        {{ conteos.abiertos }}
+                    </h3>
+
+                    <small class="text-muted">
+                        Abiertos
+                    </small>
+
+                </div>
+
+            </div>
+
+        </a>
+
+    </div>
+
+    <div class="col-6 col-md">
+
+        <a
+            href="?estado=EN_PROCESO"
+            class="text-decoration-none"
+        >
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h3 class="mb-0 text-warning">
+                        {{ conteos.en_proceso }}
+                    </h3>
+
+                    <small class="text-muted">
+                        En proceso
+                    </small>
+
+                </div>
+
+            </div>
+
+        </a>
+
+    </div>
+
+    <div class="col-6 col-md">
+
+        <a
+            href="?estado=POR_CONFIRMAR"
+            class="text-decoration-none"
+        >
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h3 class="mb-0 text-info">
+                        {{ conteos.por_confirmar }}
+                    </h3>
+
+                    <small class="text-muted">
+                        Por confirmar
+                    </small>
+
+                </div>
+
+            </div>
+
+        </a>
+
+    </div>
+
+    <div class="col-6 col-md">
+
+        <a
+            href="?estado=CERRADO"
+            class="text-decoration-none"
+        >
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h3 class="mb-0 text-success">
+                        {{ conteos.cerrados }}
+                    </h3>
+
+                    <small class="text-muted">
+                        Cerrados
+                    </small>
+
+                </div>
+
+            </div>
+
+        </a>
+
+    </div>
+
+</div>
+
+<form
+    method="get"
+    class="row g-2 mb-3"
+>
+
+    <div class="col-md-5">
+
+        <input
+            type="search"
+            name="q"
+            value="{{ q }}"
+            class="form-control"
+            placeholder="Buscar por título o usuario..."
+        >
+
+    </div>
+
+    <div class="col-md-2">
+
+        <select
+            name="estado"
+            class="form-select"
+            onchange="this.form.submit()"
+        >
+
+            <option value="">
+                Todos los estados
+            </option>
+
+            {% for valor, etiqueta in estados %}
+
+                <option
+                    value="{{ valor }}"
+                    {% if estado_sel == valor %}selected{% endif %}
+                >
+                    {{ etiqueta }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </div>
+
+    <div class="col-md-2">
+
+        <select
+            name="area"
+            class="form-select"
+            onchange="this.form.submit()"
+        >
+
+            <option value="">
+                Todas las áreas
+            </option>
+
+            {% for a in areas %}
+
+                <option
+                    value="{{ a.pk }}"
+                    {% if area_sel == a.pk|stringformat:"s" %}selected{% endif %}
+                >
+                    {{ a.nombre }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </div>
+
+    <div class="col-md-2">
+
+        <select
+            name="categoria"
+            class="form-select"
+            onchange="this.form.submit()"
+        >
+
+            <option value="">
+                Todas las categorías
+            </option>
+
+            {% for c in categorias %}
+
+                <option
+                    value="{{ c.pk }}"
+                    {% if categoria_sel == c.pk|stringformat:"s" %}selected{% endif %}
+                >
+                    {{ c.nombre }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </div>
+
+    <div class="col-md-1">
+
+        <button
+            type="submit"
+            class="btn btn-outline-primary w-100"
+        >
+            Buscar
+        </button>
+
+    </div>
+
+</form>
+
+<div class="card shadow-sm">
+
+    <div class="card-header bg-white">
+
+        {{ page_obj.paginator.count }}
+        ticket{{ page_obj.paginator.count|pluralize }}
+
+    </div>
+
+    <table class="table table-hover align-middle mb-0">
+
+        <thead>
+
+            <tr>
+                <th>ID</th>
+                <th>Título</th>
+                <th>Usuario</th>
+                <th>Área</th>
+                <th>Categoría</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            {% for ticket in page_obj %}
+
+                <tr
+                    data-url="{% url 'detalle_ticket' ticket.pk %}"
+                    onclick="window.location=this.dataset.url;"
+                    style="cursor: pointer;"
+                >
+
+                    <td>
+                        <code>#{{ ticket.pk }}</code>
+                    </td>
+
+                    <td class="fw-semibold">
+                        {{ ticket.titulo }}
+                    </td>
+
+                    <td>
+                        {{ ticket.creado_por }}
+                    </td>
+
+                    <td>
+                        {{ ticket.area|default:"—" }}
+                    </td>
+
+                    <td>
+
+                        {% if ticket.categoria %}
+
+                            {{ ticket.categoria }}
+
+                        {% else %}
+
+                            <em class="text-muted">
+                                Sin categoría
+                            </em>
+
+                        {% endif %}
+
+                    </td>
+
+                    <td>
+
+                        {% include "tickets/_estado_badge.html" %}
+
+                    </td>
+
+                    <td>
+                        {{ ticket.creado_en|date:"d M Y" }}
+                    </td>
+
+                </tr>
+
+            {% empty %}
+
+                <tr>
+
+                    <td
+                        colspan="7"
+                        class="text-center text-muted"
+                    >
+                        No hay tickets con esos filtros.
+                    </td>
+
+                </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+{% include "tickets/_paginacion.html" %}
+
+{% endblock %}

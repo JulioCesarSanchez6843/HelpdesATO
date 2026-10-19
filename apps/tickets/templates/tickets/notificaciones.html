@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+
+    <h3 class="mb-0">
+        Notificaciones
+    </h3>
+
+    {% if notificaciones_sin_leer %}
+
+        <form
+            method="post"
+            action="{% url 'notificaciones_leer_todas' %}"
+        >
+
+            {% csrf_token %}
+
+            <button
+                type="submit"
+                class="btn btn-outline-secondary btn-sm"
+            >
+                Marcar todas como leídas
+            </button>
+
+        </form>
+
+    {% endif %}
+
+</div>
+
+<div class="list-group shadow-sm">
+
+    {% for n in notificaciones %}
+
+        <div
+            class="list-group-item
+            d-flex
+            justify-content-between
+            align-items-center
+            {% if not n.leida %}list-group-item-primary{% endif %}"
+        >
+
+            <div>
+
+                <div>
+                    {{ n.mensaje }}
+                </div>
+
+                <small class="text-muted">
+                    {{ n.creada_en|date:"d/m/Y H:i" }}
+                </small>
+
+            </div>
+
+            <div class="d-flex gap-2">
+
+                {% if n.ticket %}
+
+                    <form
+                        method="post"
+                        action="{% url 'abrir_notificacion' n.pk %}"
+                    >
+
+                        {% csrf_token %}
+
+                        <button
+                            type="submit"
+                            class="btn btn-sm btn-primary"
+                        >
+                            Ver ticket
+                        </button>
+
+                    </form>
+
+                {% endif %}
+
+                {% if not n.leida %}
+
+                    <form
+                        method="post"
+                        action="{% url 'marcar_notificacion_leida' n.pk %}"
+                    >
+
+                        {% csrf_token %}
+
+                        <button
+                            type="submit"
+                            class="btn btn-sm btn-outline-secondary"
+                        >
+                            Marcar leída
+                        </button>
+
+                    </form>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    {% empty %}
+
+        <div class="list-group-item text-center text-muted">
+            No tienes notificaciones.
+        </div>
+
+    {% endfor %}
+
+</div>
+
+{% endblock %}

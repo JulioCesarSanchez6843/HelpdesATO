@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7 col-lg-6">
+
+    {% if invalido %}
+
+      <div class="card shadow-sm border-danger">
+        <div class="card-body">
+          <h4 class="card-title">Enlace no válido</h4>
+          <p class="mb-3">
+            Este enlace ya no sirve: pudo haber caducado, o el ticket ya fue
+            confirmado o reabierto. Si todavía necesitas responder, abre el
+            ticket desde la aplicación.
+          </p>
+          <a href="{% url 'lista_tickets' %}" class="btn btn-primary">Ir a mis tickets</a>
+        </div>
+      </div>
+
+    {% elif resultado %}
+
+      <div class="card shadow-sm {% if resultado == 'confirmado' %}border-success{% endif %}">
+        <div class="card-body">
+          {% if resultado == "confirmado" %}
+            <h4 class="card-title text-success">¡Gracias! Ticket cerrado</h4>
+            <p class="mb-3">Confirmaste que el ticket #{{ ticket.pk }} quedó resuelto.</p>
+          {% elif resultado == "rechazado" %}
+            <h4 class="card-title">Ticket reabierto</h4>
+            <p class="mb-3">
+              Avisamos al equipo de soporte que el ticket #{{ ticket.pk }} no está
+              resuelto. Volvió a «En proceso».
+            </p>
+          {% else %}
+            <h4 class="card-title">Este ticket ya fue atendido</h4>
+            <p class="mb-3">El ticket #{{ ticket.pk }} ya no estaba esperando tu confirmación.</p>
+          {% endif %}
+          <a href="{% url 'lista_tickets' %}" class="btn btn-primary">Ir a mis tickets</a>
+        </div>
+      </div>
+
+    {% else %}
+
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h4 class="card-title">¿Quedó resuelto tu problema?</h4>
+          <p class="text-muted mb-3">Ticket #{{ ticket.pk }} — {{ ticket.titulo }}</p>
+
+          <div class="mb-3">
+            <div class="fw-semibold small text-uppercase text-muted">Nota de resolución</div>
+            <p class="mb-0">{{ ticket.nota_resolucion|linebreaksbr }}</p>
+          </div>
+
+          <form method="post" class="mb-4">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="confirmar">
+            <button type="submit" class="btn btn-success w-100">
+              Sí, quedó resuelto — cerrar el ticket
+            </button>
+          </form>
+
+          <hr>
+
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="rechazar">
+            <label for="motivo" class="form-label">¿Sigue el problema? Cuéntanos qué pasa (opcional)</label>
+            <textarea id="motivo" name="motivo" class="form-control mb-2" rows="3" maxlength="1000"></textarea>
+            <button type="submit" class="btn btn-outline-danger w-100">
+              No está resuelto — reabrir el ticket
+            </button>
+          </form>
+        </div>
+      </div>
+
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

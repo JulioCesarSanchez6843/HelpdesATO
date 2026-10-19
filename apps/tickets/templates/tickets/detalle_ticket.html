@@ -110,6 +110,55 @@
             {% endif %}
         {% endif %}
 
+        {% if puede_responder_cierre %}
+
+            <div class="card border-info mb-3">
+
+                <div class="card-body">
+
+                    <h5 class="card-title">¿Quedó resuelto tu problema?</h5>
+
+                    <p class="text-muted">
+                        Soporte marcó el ticket como resuelto. Confírmalo para cerrarlo
+                        o dinos que sigue el problema.
+                    </p>
+
+                    <form method="post" action="{% url 'responder_cierre' ticket.pk %}" class="mb-3">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="confirmar">
+                        <button type="submit" class="btn btn-success w-100">
+                            Sí, quedó resuelto — cerrar el ticket
+                        </button>
+                    </form>
+
+                    <form method="post" action="{% url 'responder_cierre' ticket.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="rechazar">
+                        <textarea
+                            name="motivo"
+                            class="form-control mb-2"
+                            rows="2"
+                            maxlength="1000"
+                            placeholder="Cuéntanos qué sigue pasando (opcional)"
+                        ></textarea>
+                        <button type="submit" class="btn btn-outline-danger w-100">
+                            No está resuelto — reabrir
+                        </button>
+                    </form>
+
+                </div>
+
+            </div>
+
+        {% elif ticket.estado == "POR_CONFIRMAR" %}
+
+            <div class="alert alert-info">
+                Esperando que {{ ticket.creado_por.nombre }} confirme que el problema
+                quedó resuelto. Se le envió un correo con el enlace.
+            </div>
+
+        {% endif %}
+
         <h5>Historial de actividad</h5>
 
         <ul class="list-group mb-3">
@@ -135,9 +184,62 @@
 
             {% endfor %}
 
-        </ul>
+            </ul>
 
     </div>
+
+    {% if form_gestion %}
+
+        <div class="col-md-5">
+
+            <div class="card">
+
+                <div class="card-body">
+
+                    <h5 class="card-title">Gestionar ticket</h5>
+
+                    <form method="post">
+
+                        {% csrf_token %}
+
+                        {% include "_form_fields.html" with form=form_gestion %}
+
+                        <button
+                            type="submit"
+                            name="guardar_gestion"
+                            value="1"
+                            class="btn btn-primary w-100"
+                        >
+                            Guardar cambios
+                        </button>
+
+                    </form>
+
+                    {% if ticket.estado == "POR_CONFIRMAR" %}
+                        <hr>
+                        <p class="small text-muted mb-2">
+                            ¿El usuario no responde? Puedes cerrarlo tú; quedará
+                            registrado en el historial.
+                        </p>
+                        <form
+                            method="post"
+                            action="{% url 'forzar_cierre' ticket.pk %}"
+                            onsubmit="return confirm('¿Cerrar el ticket sin la confirmación del usuario?');"
+                        >
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-secondary btn-sm w-100">
+                                Cerrar sin confirmación del usuario
+                            </button>
+                        </form>
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    {% endif %}
 
 </div>
 

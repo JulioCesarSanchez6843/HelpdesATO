@@ -1,5 +1,6 @@
 from django import forms
 from django.conf import settings
+from django.utils import timezone
 
 from apps.accounts.forms import BootstrapFormMixin
 from .models import Ticket
@@ -51,3 +52,92 @@ class TicketForm(BootstrapFormMixin, forms.ModelForm):
         widgets = {
             "descripcion": forms.Textarea(attrs={"rows": 5}),
         }
+
+class TicketGestionForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = Ticket
+        fields = [
+            "estado",
+            "categoria",
+            "numero_serie",
+            "nota_resolucion",
+        ]
+        labels = {
+            "estado": "Estado",
+            "categoria": "Categoría",
+            "numero_serie": "Número de serie / Service Tag",
+            "nota_resolucion": "Nota de resolución",
+        }
+        help_texts = {
+            "estado": (
+                "«Por confirmar» le envía un correo al usuario para que confirme "
+                "que se resolvió; el ticket se cierra cuando él lo confirma."
+            ),
+            "numero_serie": (
+                "Es el mismo dato: el número de serie del equipo o, en equipos "
+                "Dell, su Service Tag."
+            ),
+            "nota_resolucion": (
+                "Obligatoria al marcar «Por confirmar». "
+                "Si el ticket se vuelve a abrir, se borra."
+            ),
+        }
+        widgets = {
+            "nota_resolucion": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["categoria"].required = False
+        self.estado_original = self.instance.estado
+
+        permitidos = {
+            Ticket.Estado.ABIERTO,
+            Ticket.Estado.EN_PROCESO,
+            Ticket.Estado.POR_CONFIRMAR,
+        }
+        if self.estado_original == Ticket.Estado.CERRADO:
+            permitidos.add(Ticket.Estado.CERRADO)
+        self.fields["estado"].choices = [
+            (valor, etiqueta)
+            for valor, etiqueta in Ticket.Estado.choices
+            if valor in permitidos
+        ]
+
+    def clean(self):
+        datos = super().clean()
+        estado = datos.get("estado")
+        nota = (datos.get("nota_resolucion") or "").strip()
+
+        if estado == Ticket.Estado.CERRADO and self.estado_original != Ticket.Estado.CERRADO:
+            self.add_error(
+                "estado",
+                "El ticket se cierra cuando el usuario confirma. "
+                "Usa «Por confirmar» para pedirle la confirmación.",
+            )
+
+        if estado == Ticket.Estado.POR_CONFIRMAR and not nota:
+            self.add_error(
+                "nota_resolucion",
+                "Escribe la nota de resolución para pedirle la confirmación al usuario.",
+            )
+
+        resuelto = estado in (Ticket.Estado.POR_CONFIRMAR, Ticket.Estado.CERRADO)
+        datos["nota_resolucion"] = nota if resuelto else ""
+        return datos
+
+    def save(self, commit=True):
+        ticket = super().save(commit=False)
+
+        if ticket.estado == Ticket.Estado.POR_CONFIRMAR:
+            if self.estado_original != Ticket.Estado.POR_CONFIRMAR:
+                ticket.resuelto_en = timezone.now()
+            ticket.cerrado_en = None
+        elif ticket.estado != Ticket.Estado.CERRADO:
+            ticket.resuelto_en = None
+            ticket.cerrado_en = None
+
+        if commit:
+            ticket.save()
+
+        return ticket
