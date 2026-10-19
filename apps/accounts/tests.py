@@ -1,5 +1,3 @@
-from unittest import skip
-
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
@@ -75,7 +73,6 @@ class GestionUsuariosTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn("correo", r.context["form"].errors)
 
-    @skip("área opcional temporalmente")
     def test_area_es_obligatoria(self):
         self.client.force_login(self.admin)
         r = self.client.post(reverse("nuevo_usuario"), {

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-3">
+    <h3 class="mb-0">{{ titulo }}</h3>
+    <p class="text-muted mb-0">{{ descripcion }}</p>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h5 class="mb-0">{{ titulo }}</h5>
+                <small class="text-muted">{{ registros|length }} registrado{{ registros|length|pluralize }}</small>
+            </div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevo">
+                + Agregar
+            </button>
+        </div>
+
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>En uso</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for registro in registros %}
+                <tr>
+                    <td><span class="text-primary me-2">&#9679;</span>{{ registro.nombre }}</td>
+                    <td class="text-muted">{{ registro.en_uso }}</td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                data-bs-toggle="modal" data-bs-target="#modalEditar{{ registro.pk }}">Editar</button>
+                        <form method="post" action="{% url url_eliminar registro.pk %}" class="d-inline"
+                              onsubmit="return confirm('¿Eliminar «{{ registro.nombre|escapejs }}»?');">
+                            {% csrf_token %}
+                            <button class="btn btn-sm btn-outline-danger"
+                                    {% if registro.en_uso %}disabled title="Está en uso, no se puede eliminar"{% endif %}>Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="text-center text-muted">No hay registros.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="modalNuevo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url url_lista %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Nuevo registro — {{ singular }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Nombre *</label>
+                    <input type="text" class="form-control" name="nombre" maxlength="100" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Agregar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% for registro in registros %}
+<div class="modal fade" id="modalEditar{{ registro.pk }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url url_editar registro.pk %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar {{ singular }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Nombre *</label>
+                    <input type="text" class="form-control" name="nombre" value="{{ registro.nombre }}" maxlength="100" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
