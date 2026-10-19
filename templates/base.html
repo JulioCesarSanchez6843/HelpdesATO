@@ -11,7 +11,8 @@
     <nav class="navbar navbar-expand navbar-light bg-white border-bottom px-3">
         <span class="navbar-brand fw-bold">HD Helpdesk</span>
         <div class="navbar-nav me-auto">
-            {% if user.es_admin %}
+        {% if user.es_admin %}
+                <a class="nav-link" href="{% url 'lista_tickets' %}">Tickets</a>
                 <a class="nav-link" href="{% url 'lista_usuarios' %}">Usuarios</a>
                 <a class="nav-link" href="{% url 'lista_areas' %}">Áreas</a>
                 <a class="nav-link" href="{% url 'lista_categorias' %}">Categorías</a>

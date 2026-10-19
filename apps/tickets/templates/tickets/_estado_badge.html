@@ -1,0 +1,9 @@
+{% if ticket.estado == "ABIERTO" %}
+<span class="badge bg-primary-subtle text-primary-emphasis">{{ ticket.get_estado_display }}</span>
+{% elif ticket.estado == "EN_PROCESO" %}
+<span class="badge bg-warning-subtle text-warning-emphasis">{{ ticket.get_estado_display }}</span>
+{% elif ticket.estado == "POR_CONFIRMAR" %}
+<span class="badge bg-info-subtle text-info-emphasis">{{ ticket.get_estado_display }}</span>
+{% else %}
+<span class="badge bg-success-subtle text-success-emphasis">{{ ticket.get_estado_display }}</span>
+{% endif %}

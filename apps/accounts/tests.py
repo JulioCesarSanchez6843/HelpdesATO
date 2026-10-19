@@ -15,7 +15,7 @@ class LoginTests(TestCase):
 
     def test_login_correcto_no_distingue_mayusculas(self):
         r = self.client.post(reverse("login"), {"correo": "ana@empresa.com", "password": PASSWORD})
-        self.assertRedirects(r, reverse("lista_usuarios"), fetch_redirect_response=False)
+        self.assertRedirects(r, reverse("lista_tickets"), fetch_redirect_response=False)
 
     def test_password_incorrecta(self):
         r = self.client.post(reverse("login"), {"correo": "ana@empresa.com", "password": "mal"})
@@ -27,11 +27,11 @@ class LoginTests(TestCase):
         self.assertContains(r, "incorrectos")
 
     def test_respeta_next_seguro_y_bloquea_externo(self):
-        r = self.client.post(reverse("login"), {"correo": "ana@empresa.com", "password": PASSWORD, "next": "/usuarios/nuevo/"})
-        self.assertRedirects(r, "/usuarios/nuevo/", fetch_redirect_response=False)
+        r = self.client.post(reverse("login"), {"correo": "ana@empresa.com", "password": PASSWORD, "next": "/tickets/nuevo/"})
+        self.assertRedirects(r, "/tickets/nuevo/", fetch_redirect_response=False)
         self.client.logout()
         r = self.client.post(reverse("login"), {"correo": "ana@empresa.com", "password": PASSWORD, "next": "https://malo.com/"})
-        self.assertRedirects(r, reverse("lista_usuarios"), fetch_redirect_response=False)
+        self.assertRedirects(r, reverse("lista_tickets"), fetch_redirect_response=False)
 
     def test_logout_solo_por_post(self):
         self.client.force_login(self.user)
@@ -49,9 +49,9 @@ class GestionUsuariosTests(TestCase):
     def test_usuario_normal_no_accede_a_gestion(self):
         self.client.force_login(self.user)
         for nombre in ("lista_usuarios", "nuevo_usuario"):
-            self.assertEqual(self.client.get(reverse(nombre)).status_code, 403)
+            self.assertRedirects(self.client.get(reverse(nombre)), reverse("lista_tickets"))
         r = self.client.post(reverse("cambiar_estado_usuario", args=[self.admin.pk]))
-        self.assertEqual(r.status_code, 403)
+        self.assertRedirects(r, reverse("lista_tickets"))
         self.admin.refresh_from_db()
         self.assertTrue(self.admin.activo)
 

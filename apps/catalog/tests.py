@@ -17,7 +17,7 @@ class CatalogosTests(TestCase):
         self.client.force_login(self.user)
         self.client.post(reverse("lista_areas"), {"nombre": "HACK"})
         self.assertFalse(Area.objects.filter(nombre="HACK").exists())
-        self.assertEqual(self.client.get(reverse("lista_areas")).status_code, 403)
+        self.assertRedirects(self.client.get(reverse("lista_areas")), reverse("lista_tickets"))
 
     def test_crud_de_los_tres_catalogos(self):
         self.client.force_login(self.admin)

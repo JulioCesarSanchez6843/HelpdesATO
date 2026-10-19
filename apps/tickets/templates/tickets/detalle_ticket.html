@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+
+    <h3>Ticket #{{ ticket.pk }} — {{ ticket.titulo }}</h3>
+
+    <span
+        class="badge fs-6
+        {% if ticket.estado == 'ABIERTO' %}bg-primary
+        {% elif ticket.estado == 'EN_PROCESO' %}bg-warning text-dark
+        {% elif ticket.estado == 'POR_CONFIRMAR' %}bg-info text-dark
+        {% else %}bg-success{% endif %}"
+    >
+        {{ ticket.get_estado_display }}
+    </span>
+
+</div>
+
+<div class="row">
+
+    <div class="col-md-7">
+
+        <div class="card mb-3">
+
+            <div class="card-body">
+
+                <h5 class="card-title">Descripción</h5>
+
+                <p class="card-text">{{ ticket.descripcion|linebreaksbr }}</p>
+
+                <ul class="list-unstyled small text-muted mb-0">
+
+                    <li><strong>Área:</strong> {{ ticket.area|default:"—" }}</li>
+
+                    <li>
+                        <strong>Categoría:</strong>
+                        {{ ticket.categoria|default:"Sin categoría" }}
+                    </li>
+
+                    {% if ticket.numero_serie %}
+                        <li>
+                            <strong>Número de serie / Service Tag:</strong>
+                            {{ ticket.numero_serie }}
+                        </li>
+                    {% endif %}
+
+                    <li>
+                        <strong>Creado por:</strong>
+                        {{ ticket.creado_por }}
+                        el {{ ticket.creado_en|date:"d/m/Y H:i" }}
+                    </li>
+
+                    {% if ticket.cerrado_en %}
+                        <li>
+                            <strong>Cerrado el:</strong>
+                            {{ ticket.cerrado_en|date:"d/m/Y H:i" }}
+                        </li>
+                    {% endif %}
+
+                </ul>
+
+            </div>
+
+        </div>
+
+        {% if adjuntos %}
+
+            <div class="card mb-3">
+
+                <div class="card-body">
+
+                    <h6 class="card-title">Imágenes adjuntas</h6>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for adjunto in adjuntos %}
+                            <a href="{% url 'ver_adjunto' adjunto.pk %}" target="_blank" rel="noopener">
+                                <img
+                                    src="{% url 'ver_adjunto' adjunto.pk %}"
+                                    alt="{{ adjunto.nombre }}"
+                                    class="img-thumbnail"
+                                    style="max-width: 180px; max-height: 180px; object-fit: cover;"
+                                >
+                            </a>
+                        {% endfor %}
+                    </div>
+
+                </div>
+
+            </div>
+
+        {% endif %}
+
+        {% if ticket.estado == "POR_CONFIRMAR" or ticket.estado == "CERRADO" %}
+            {% if ticket.nota_resolucion %}
+
+                <div class="card border-success mb-3">
+
+                    <div class="card-body">
+
+                        <h6 class="card-title text-success">Nota de resolución</h6>
+
+                        <p class="card-text mb-0">{{ ticket.nota_resolucion|linebreaksbr }}</p>
+
+                    </div>
+
+                </div>
+
+            {% endif %}
+        {% endif %}
+
+        <h5>Historial de actividad</h5>
+
+        <ul class="list-group mb-3">
+
+            {% for evento in historial %}
+
+                <li class="list-group-item">
+
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ evento.get_tipo_display }}</strong>
+                        <small class="text-muted">{{ evento.fecha|date:"d/m/Y H:i" }}</small>
+                    </div>
+
+                    <div>{{ evento.contenido|linebreaksbr }}</div>
+
+                    <small class="text-muted">por {{ evento.usuario }}</small>
+
+                </li>
+
+            {% empty %}
+
+                <li class="list-group-item text-muted">Sin actividad todavía.</li>
+
+            {% endfor %}
+
+        </ul>
+
+    </div>
+
+</div>
+
+{% endblock %}

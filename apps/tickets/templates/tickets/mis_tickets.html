@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+
+    <div>
+
+        <h3 class="mb-0">
+            Mis Tickets
+        </h3>
+
+        <p class="text-muted mb-0">
+            Bienvenido, {{ user.nombre }}.
+            Tienes
+            {{ conteos.activos }}
+            ticket{{ conteos.activos|pluralize }}
+            activo{{ conteos.activos|pluralize }}.
+        </p>
+
+    </div>
+
+    <a
+        href="{% url 'nuevo_ticket' %}"
+        class="btn btn-primary"
+    >
+        + Nuevo ticket
+    </a>
+
+</div>
+
+<div class="row g-3 mb-3">
+
+    <div class="col-6 col-md-3">
+
+        <a
+            href="?estado=ABIERTO"
+            class="text-decoration-none"
+        >
+
+            <div
+                class="card shadow-sm text-center
+                {% if estado_sel == 'ABIERTO' %}border-primary{% endif %}"
+            >
+
+                <div class="card-body">
+
+                    <h3 class="mb-0">
+                        {{ conteos.abiertos }}
+                    </h3>
+
+                    <small class="text-muted">
+                        Abiertos
+                    </small>
+
+                </div>
+
+            </div>
+
+        </a>
+
+    </div>
+
+    <div class="col-6 col-md-3">
+
+        <a
+            href="?estado=EN_PROCESO"
+            class="text-decoration-none"
+        >
+
+            <div
+                class="card shadow-sm text-center
+                {% if estado_sel == 'EN_PROCESO' %}border-primary{% endif %}"
+            >
+
+                <div class="card-body">
+
+                    <h3 class="mb-0">
+                        {{ conteos.en_proceso }}
+                    </h3>
+
+                    <small class="text-muted">
+                        En proceso
+                    </small>
+
+                </div>
+
+            </div>
+
+        </a>
+
+    </div>
+
+    <div class="col-6 col-md-3">
+
+        <a
+            href="?estado=POR_CONFIRMAR"
+            class="text-decoration-none"
+        >
+
+            <div
+                class="card shadow-sm text-center
+                {% if estado_sel == 'POR_CONFIRMAR' %}border-primary{% endif %}"
+            >
+
+                <div class="card-body">
+
+                    <h3 class="mb-0">
+                        {{ conteos.por_confirmar }}
+                    </h3>
+
+                    <small class="text-muted">
+                        Por confirmar
+                    </small>
+
+                </div>
+
+            </div>
+
+        </a>
+
+    </div>
+
+    <div class="col-6 col-md-3">
+
+        <a
+            href="?estado=CERRADO"
+            class="text-decoration-none"
+        >
+
+            <div
+                class="card shadow-sm text-center
+                {% if estado_sel == 'CERRADO' %}border-primary{% endif %}"
+            >
+
+                <div class="card-body">
+
+                    <h3 class="mb-0">
+                        {{ conteos.cerrados }}
+                    </h3>
+
+                    <small class="text-muted">
+                        Cerrados
+                    </small>
+
+                </div>
+
+            </div>
+
+        </a>
+
+    </div>
+
+</div>
+
+<form method="get" class="row g-2 mb-3">
+
+    <div class="col-md-8">
+
+        <input
+            type="search"
+            name="q"
+            value="{{ q }}"
+            class="form-control"
+            placeholder="Buscar por título..."
+        >
+
+    </div>
+
+    <div class="col-md-3">
+
+        <select
+            name="estado"
+            class="form-select"
+            onchange="this.form.submit()"
+        >
+
+            <option value="">
+                Todos los estados
+            </option>
+
+            {% for valor, etiqueta in estados %}
+
+                <option
+                    value="{{ valor }}"
+                    {% if estado_sel == valor %}selected{% endif %}
+                >
+                    {{ etiqueta }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </div>
+
+    <div class="col-md-1">
+
+        <button
+            type="submit"
+            class="btn btn-outline-primary w-100"
+        >
+            Buscar
+        </button>
+
+    </div>
+
+</form>
+
+<div class="card shadow-sm">
+
+    <table class="table table-hover align-middle mb-0">
+
+        <thead>
+
+            <tr>
+                <th>ID</th>
+                <th>Título</th>
+                <th>Área</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            {% for ticket in page_obj %}
+
+                <tr
+                    data-url="{% url 'detalle_ticket' ticket.pk %}"
+                    onclick="window.location=this.dataset.url;"
+                    style="cursor: pointer;"
+                >
+
+                    <td>
+                        <code>#{{ ticket.pk }}</code>
+                    </td>
+
+                    <td class="fw-semibold">
+                        {{ ticket.titulo }}
+                    </td>
+
+                    <td>
+                        {{ ticket.area|default:"—" }}
+                    </td>
+
+                    <td>
+
+                        {% include "tickets/_estado_badge.html" %}
+
+                    </td>
+
+                    <td>
+                        {{ ticket.creado_en|date:"d M Y" }}
+                    </td>
+
+                </tr>
+
+            {% empty %}
+
+                <tr>
+
+                    <td
+                        colspan="5"
+                        class="text-center text-muted"
+                    >
+                        No tienes tickets con esos filtros.
+                    </td>
+
+                </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+{% include "tickets/_paginacion.html" %}
+
+{% endblock %}

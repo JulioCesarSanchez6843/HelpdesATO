@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h3 class="mb-1">Nuevo ticket</h3>
+
+<p class="text-muted">
+    Cuéntanos qué pasa. Solo necesitamos un título y la descripción;
+    si ayuda, agrega fotos o capturas de pantalla.
+</p>
+
+<form method="post" enctype="multipart/form-data" class="col-md-7">
+
+    {% csrf_token %}
+
+    {% include "_form_fields.html" with form=form %}
+
+    <button type="submit" class="btn btn-primary">Crear ticket</button>
+
+    <a href="{% url 'lista_tickets' %}" class="btn btn-outline-secondary">Cancelar</a>
+
+</form>
+
+{% endblock %}
