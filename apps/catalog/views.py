@@ -11,12 +11,12 @@ CATALOGOS = {
     "areas": {
         "modelo": Area, "form": AreaForm, "titulo": "Áreas", "singular": "área",
         "descripcion": "Gestiona las áreas de la organización.",
-        "relaciones": ("usuarios",),
+        "relaciones": ("usuarios", "tickets"),
     },
     "categorias": {
         "modelo": Categoria, "form": CategoriaForm, "titulo": "Categorías", "singular": "categoría",
         "descripcion": "Gestiona las categorías de incidencias técnicas.",
-        "relaciones": (),
+        "relaciones": ("tickets",),
     },
     "puestos": {
         "modelo": Puesto, "form": PuestoForm, "titulo": "Puestos", "singular": "puesto",

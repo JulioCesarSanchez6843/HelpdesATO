@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     # apps propias del proyecto (se agregan conforme se construyen)
     "apps.catalog",
     "apps.accounts",
+    "apps.tickets",
 ]
 
 MIDDLEWARE = [

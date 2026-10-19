@@ -2,6 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from apps.accounts.models import Usuario
+from apps.tickets.models import Ticket
 from .models import Area, Categoria, Puesto
 
 PASSWORD = "pw-segura-123"
@@ -40,12 +41,15 @@ class CatalogosTests(TestCase):
 
     def test_no_se_elimina_lo_que_esta_en_uso(self):
         area = Area.objects.create(nombre="Ventas")
+        cat = Categoria.objects.create(nombre="Red")
         puesto = Puesto.objects.create(nombre="Jefe")
-        Usuario.objects.filter(pk=self.user.pk).update(area=area, puesto=puesto)
+        Ticket.objects.create(titulo="t", descripcion="d", area=area, categoria=cat, creado_por=self.user)
+        Usuario.objects.filter(pk=self.user.pk).update(puesto=puesto)
         self.client.force_login(self.admin)
         self.client.post(reverse("eliminar_areas", args=[area.pk]))
+        self.client.post(reverse("eliminar_categorias", args=[cat.pk]))
         self.client.post(reverse("eliminar_puestos", args=[puesto.pk]))
-        self.assertTrue(Area.objects.exists() and Puesto.objects.exists())
+        self.assertTrue(Area.objects.exists() and Categoria.objects.exists() and Puesto.objects.exists())
 
     def test_eliminar_solo_por_post(self):
         area = Area.objects.create(nombre="Ventas")
