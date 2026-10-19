@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-4">
+    <h3 class="mb-0">Reportes y estadísticas</h3>
+    <p class="text-muted mb-0">Indicadores de rendimiento del sistema de helpdesk</p>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <small class="text-muted text-uppercase">Total tickets</small>
+                    <span class="bg-light rounded p-2">🎫</span>
+                </div>
+                <h2 class="fw-bold mt-2 mb-0">{{ total }}</h2>
+                <small class="text-muted">Todos los registros</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <small class="text-muted text-uppercase">Tickets abiertos</small>
+                    <span class="bg-light rounded p-2">📈</span>
+                </div>
+                <h2 class="fw-bold mt-2 mb-0">{{ abiertos }}</h2>
+                <small class="text-muted d-block">Pendientes de atender</small>
+                <small class="text-muted">{{ en_proceso }} en proceso · {{ por_confirmar }} por confirmar</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <small class="text-muted text-uppercase">Tiempo promedio</small>
+                    <span class="bg-light rounded p-2">🕐</span>
+                </div>
+                <h2 class="fw-bold mt-2 mb-0">
+                    {% if tiempo_promedio_horas is not None %}{{ tiempo_promedio_horas }} h{% else %}—{% endif %}
+                </h2>
+                <small class="text-muted">Por ticket cerrado</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <small class="text-muted text-uppercase">% Resueltos</small>
+                    <span class="bg-light rounded p-2">✅</span>
+                </div>
+                <h2 class="fw-bold mt-2 mb-0">{{ porcentaje_resueltos }}%</h2>
+                <small class="text-muted d-block">{{ cerrados }} de {{ total }} cerrados</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="mb-3">Actividad — últimos 7 días</h5>
+                <canvas id="graficaActividad" height="220"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="mb-3">Distribución por estado</h5>
+                <canvas id="graficaDistribucion" height="220"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ graficas|json_script:"datos-graficas" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+    const datos = JSON.parse(document.getElementById('datos-graficas').textContent);
+
+    new Chart(document.getElementById('graficaDistribucion'), {
+        type: 'doughnut',
+        data: {
+            labels: datos.distribucion.labels,
+            datasets: [{
+                data: datos.distribucion.data,
+                backgroundColor: ['#3b82f6', '#f97316', '#06b6d4', '#22c55e'],
+                borderWidth: 0
+            }]
+        },
+        options: { cutout: '65%', plugins: { legend: { position: 'bottom' } } }
+    });
+
+    new Chart(document.getElementById('graficaActividad'), {
+        type: 'bar',
+        data: {
+            labels: datos.actividad.labels,
+            datasets: [{ data: datos.actividad.data, backgroundColor: '#3b82f6', borderRadius: 4 }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+</script>
+{% endblock %}

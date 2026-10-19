@@ -709,10 +709,13 @@ class FiltrosTests(BaseTicketsTest):
         self.assertEqual(r.context["conteos"]["total"], 3)
         self.assertEqual(r.context["conteos"]["activos"], 2)
 
-    def test_pantallas_de_lista_cargan_con_todos_los_estados(self):
+    def test_pantallas_de_lista_y_reportes_cargan_con_todos_los_estados(self):
         self.crear_ticket(autor=self.u1)
         self.crear_ticket(autor=self.u1, estado="POR_CONFIRMAR", resuelto_en=timezone.now())
         self.entrar(self.u1)
         self.assertContains(self.client.get(reverse("lista_tickets")), "Por confirmar")
         self.entrar(self.admin)
         self.assertContains(self.client.get(reverse("lista_tickets")), "Por confirmar")
+        r = self.client.get(reverse("reportes"))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["graficas"]["distribucion"]["data"], [1, 0, 1, 0])
