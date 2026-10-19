@@ -1,0 +1,9 @@
+{% autoescape off %}Hola {{ ticket.creado_por.nombre }},
+
+Gracias por confirmar. Tu ticket quedó cerrado.
+
+Ticket #{{ ticket.pk }}: {{ ticket.titulo }}
+
+Si el problema vuelve a aparecer, crea un ticket nuevo desde:
+{{ url_ticket }}
+{% endautoescape %}

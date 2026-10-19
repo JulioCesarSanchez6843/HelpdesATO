@@ -1,0 +1,14 @@
+{% autoescape off %}Hola {{ ticket.creado_por.nombre }},
+
+El equipo de soporte marcó tu ticket como RESUELTO y necesita tu confirmación para cerrarlo.
+
+Ticket #{{ ticket.pk }}: {{ ticket.titulo }}
+
+Nota de resolución:
+{{ ticket.nota_resolucion }}
+
+Confirma si quedó solucionado (o dinos que no) en este enlace:
+{{ url_confirmacion }}
+
+El ticket NO se cerrará hasta que lo confirmes. Si el problema sigue, usa el mismo enlace para reabrirlo.
+{% endautoescape %}

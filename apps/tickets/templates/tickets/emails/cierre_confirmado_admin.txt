@@ -1,0 +1,6 @@
+{% autoescape off %}{{ ticket.creado_por.nombre }} confirmó que el problema quedó resuelto. El ticket se cerró.
+
+Ticket #{{ ticket.pk }}: {{ ticket.titulo }}
+
+{{ url_ticket }}
+{% endautoescape %}

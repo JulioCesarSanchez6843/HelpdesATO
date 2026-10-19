@@ -1,0 +1,11 @@
+{% autoescape off %}Hola {{ ticket.creado_por.nombre }},
+
+Tu ticket cambió de estado.
+
+Ticket #{{ ticket.pk }}: {{ ticket.titulo }}
+Antes: {{ estado_anterior }}
+Ahora: {{ ticket.get_estado_display }}
+
+Puedes verlo aquí:
+{{ url_ticket }}
+{% endautoescape %}

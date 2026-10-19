@@ -1,0 +1,9 @@
+{% autoescape off %}{{ ticket.creado_por.nombre }} indicó que el problema NO está resuelto. El ticket volvió a «En proceso».
+
+Ticket #{{ ticket.pk }}: {{ ticket.titulo }}
+{% if motivo %}
+Motivo:
+{{ motivo }}
+{% endif %}
+{{ url_ticket }}
+{% endautoescape %}

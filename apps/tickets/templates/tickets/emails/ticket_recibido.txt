@@ -1,0 +1,9 @@
+{% autoescape off %}Hola {{ ticket.creado_por.nombre }},
+
+Recibimos tu ticket y ya lo tiene el equipo de soporte.
+
+Ticket #{{ ticket.pk }}: {{ ticket.titulo }}
+
+Te avisaremos por correo cuando cambie de estado. Puedes verlo aquí:
+{{ url_ticket }}
+{% endautoescape %}

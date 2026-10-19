@@ -1,0 +1,14 @@
+{% autoescape off %}Se abrió un nuevo ticket.
+
+Ticket #{{ ticket.pk }}: {{ ticket.titulo }}
+Creado por: {{ ticket.creado_por.nombre }} ({{ ticket.creado_por.correo }})
+Área: {{ ticket.area|default:"—" }}
+
+Descripción:
+{{ ticket.descripcion }}
+{% if ticket.adjuntos.exists %}
+Incluye {{ ticket.adjuntos.count }} imagen(es) adjunta(s).
+{% endif %}
+Ábrelo aquí:
+{{ url_ticket }}
+{% endautoescape %}
