@@ -15,11 +15,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # apps propias del proyecto
-    "apps.accounts",
+    # apps propias del proyecto (se agregan conforme se construyen)
     "apps.catalog",
-    "apps.tickets",
-    "apps.dashboard",
+    "apps.accounts",
 ]
 
 MIDDLEWARE = [
@@ -45,7 +43,6 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "apps.tickets.context_processors.notificaciones",
             ],
         },
     },
