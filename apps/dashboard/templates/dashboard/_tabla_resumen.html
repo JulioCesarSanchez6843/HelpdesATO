@@ -1,0 +1,30 @@
+{% if filas %}
+<div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+        <thead>
+            <tr>
+                <th>{{ titulo }}</th>
+                <th class="text-end">Total</th>
+                <th class="text-end">Pendientes</th>
+                <th class="text-end">Cerrados</th>
+                <th class="text-end">% cerrados</th>
+                <th class="text-end">Prom. cierre</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for f in filas %}
+            <tr>
+                <td>{{ f.nombre }}</td>
+                <td class="text-end">{{ f.total }}</td>
+                <td class="text-end">{{ f.pendientes }}</td>
+                <td class="text-end">{{ f.cerrados }}</td>
+                <td class="text-end">{{ f.porcentaje }}%</td>
+                <td class="text-end">{% if f.horas is not None %}{{ f.horas }} h{% else %}—{% endif %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-muted mb-0">Sin datos en este rango.</p>
+{% endif %}

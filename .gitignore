@@ -1,22 +1,37 @@
 # Python
 __pycache__/
 *.py[cod]
+*.egg-info/
+build/
+dist/
 
-
+# Entornos virtuales
 .venv/
 venv/
 env/
 
-# Credenciales
+# Credenciales (se conserva .env.example)
 .env
+.env.*
+!.env.example
 credenciales.txt
 
 # Base de datos y archivos generados
 db.sqlite3
+*.sqlite3
 staticfiles/
 media/
 *.log
 
+# Pruebas y cobertura
+.pytest_cache/
+.coverage
+htmlcov/
+
 # Editor / sistema operativo
 .vscode/
+.idea/
 .DS_Store
+Thumbs.db
+
+.gitignore

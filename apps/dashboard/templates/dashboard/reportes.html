@@ -6,6 +6,51 @@
 </div>
 
 <div class="row g-3 mb-3">
+    <div class="col-lg-7">
+        <form method="get" class="card shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="mb-2">Filtrar estadísticas por fecha de creación</h6>
+                <div class="row g-2 align-items-end">
+                    <div class="col-sm-4">
+                        <label class="form-label small mb-1" for="desde">Desde</label>
+                        <input type="date" class="form-control" id="desde" name="desde" value="{{ desde }}">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label small mb-1" for="hasta">Hasta</label>
+                        <input type="date" class="form-control" id="hasta" name="hasta" value="{{ hasta }}">
+                    </div>
+                    <div class="col-sm-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Aplicar</button>
+                        {% if desde or hasta %}<a href="{% url 'reportes' %}" class="btn btn-outline-secondary">Quitar</a>{% endif %}
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="col-lg-5">
+        <form method="get" action="{% url 'exportar_resueltos' %}" class="card shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="mb-2">Descargar tickets resueltos (Excel)</h6>
+                <div class="row g-2 align-items-end">
+                    <div class="col-sm-4">
+                        <label class="form-label small mb-1" for="exp_desde">Cierre desde</label>
+                        <input type="date" class="form-control" id="exp_desde" name="desde">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label small mb-1" for="exp_hasta">Cierre hasta</label>
+                        <input type="date" class="form-control" id="exp_hasta" name="hasta">
+                    </div>
+                    <div class="col-sm-4">
+                        <button type="submit" class="btn btn-success w-100">⬇ Descargar</button>
+                    </div>
+                </div>
+                <small class="text-muted d-block mt-2">Sin fechas descarga todos los tickets cerrados.</small>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
     <div class="col-md-3">
         <div class="card shadow-sm h-100">
             <div class="card-body">
@@ -78,6 +123,77 @@
     </div>
 </div>
 
+<div class="row g-3 mt-0">
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="mb-3">Tickets por categoría</h5>
+                <canvas id="graficaCategorias" height="260"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="mb-3">Tickets por área (departamento)</h5>
+                <canvas id="graficaAreas" height="260"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="mb-3">Creados vs. cerrados — últimos 6 meses</h5>
+                <canvas id="graficaMensual" height="110"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mt-0">
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="mb-3">Detalle por categoría</h5>
+                {% include "dashboard/_tabla_resumen.html" with filas=por_categoria titulo="Categoría" %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="mb-3">Detalle por área</h5>
+                {% include "dashboard/_tabla_resumen.html" with filas=por_area titulo="Área" %}
+            </div>
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="mb-3">Usuarios que más tickets crean</h5>
+                {% if top_solicitantes %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead><tr><th>Usuario</th><th>Área</th><th class="text-end">Tickets</th></tr></thead>
+                        <tbody>
+                        {% for u in top_solicitantes %}
+                            <tr>
+                                <td>{{ u.creado_por__nombre }}</td>
+                                <td>{{ u.creado_por__area__nombre|default:"—" }}</td>
+                                <td class="text-end">{{ u.total }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">Sin datos en este rango.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
 {{ graficas|json_script:"datos-graficas" }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script>
@@ -104,6 +220,44 @@
         },
         options: {
             plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    function barrasApiladas(id, datos, horizontal) {
+        new Chart(document.getElementById(id), {
+            type: 'bar',
+            data: {
+                labels: datos.labels,
+                datasets: [
+                    { label: 'Pendientes', data: datos.pendientes, backgroundColor: '#f97316', borderRadius: 3 },
+                    { label: 'Cerrados', data: datos.cerrados, backgroundColor: '#22c55e', borderRadius: 3 }
+                ]
+            },
+            options: {
+                indexAxis: horizontal ? 'y' : 'x',
+                plugins: { legend: { position: 'bottom' } },
+                scales: {
+                    x: { stacked: true, beginAtZero: true, ticks: horizontal ? { stepSize: 1 } : {} },
+                    y: { stacked: true, beginAtZero: true, ticks: horizontal ? {} : { stepSize: 1 } }
+                }
+            }
+        });
+    }
+    barrasApiladas('graficaCategorias', datos.categorias, true);
+    barrasApiladas('graficaAreas', datos.areas, true);
+
+    new Chart(document.getElementById('graficaMensual'), {
+        type: 'line',
+        data: {
+            labels: datos.mensual.labels,
+            datasets: [
+                { label: 'Creados', data: datos.mensual.creados, borderColor: '#3b82f6', backgroundColor: '#3b82f6', tension: 0.3 },
+                { label: 'Cerrados', data: datos.mensual.cerrados, borderColor: '#22c55e', backgroundColor: '#22c55e', tension: 0.3 }
+            ]
+        },
+        options: {
+            plugins: { legend: { position: 'bottom' } },
             scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
         }
     });
