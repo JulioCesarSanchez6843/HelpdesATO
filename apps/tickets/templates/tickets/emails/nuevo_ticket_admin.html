@@ -1,0 +1,25 @@
+{% extends "tickets/emails/_base.html" %}
+
+{% block contenido %}
+<p style="margin:0 0 12px;">Se abrió un nuevo ticket.</p>
+
+{% include "tickets/emails/_detalle.html" with mostrar_autor=True %}
+
+<p style="margin:16px 0 4px;font-weight:bold;">Descripción</p>
+<p style="margin:0 0 16px;">{{ ticket.descripcion|linebreaksbr }}</p>
+
+{% if imagenes %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+{% for imagen in imagenes %}
+<tr>
+<td align="center" style="padding:0 0 12px 0;"><img src="cid:{{ imagen }}" width="500" alt="Imagen del ticket" border="0" style="border:0;max-width:100%;height:auto;"></td>
+</tr>
+{% endfor %}
+</table>
+{% endif %}
+
+<p style="margin:24px 0 0;">
+{% include "tickets/emails/_boton.html" with url=url_en_proceso texto="Pasar a «En proceso»" fondo="#f59e0b" color="#1f2937" %}
+{% include "tickets/emails/_boton.html" with url=url_ticket texto="Abrir en el sistema" fondo="#0d6efd" color="#ffffff" %}
+</p>
+{% endblock %}

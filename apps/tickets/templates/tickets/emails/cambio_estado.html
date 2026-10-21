@@ -1,0 +1,12 @@
+{% extends "tickets/emails/_base.html" %}
+
+{% block contenido %}
+<p style="margin:0 0 12px;">Hola {{ ticket.creado_por.nombre }},</p>
+<p style="margin:0 0 12px;">Tu ticket cambió de estado: de <strong>{{ estado_anterior }}</strong> a <strong>{{ ticket.get_estado_display }}</strong>.</p>
+
+{% include "tickets/emails/_detalle.html" %}
+
+<p style="margin:24px 0 0;">
+{% include "tickets/emails/_boton.html" with url=url_ticket texto="Ver mi ticket" fondo="#0d6efd" color="#ffffff" %}
+</p>
+{% endblock %}

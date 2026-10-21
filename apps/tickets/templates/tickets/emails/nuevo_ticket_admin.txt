@@ -9,6 +9,9 @@ Descripción:
 {% if ticket.adjuntos.exists %}
 Incluye {{ ticket.adjuntos.count }} imagen(es) adjunta(s).
 {% endif %}
+Pasar a «En proceso» sin abrir el sistema:
+{{ url_en_proceso }}
+
 Ábrelo aquí:
 {{ url_ticket }}
 {% endautoescape %}

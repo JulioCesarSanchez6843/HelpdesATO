@@ -119,6 +119,7 @@ SITE_URL = config(
 ).rstrip("/")
 
 CIERRE_TOKEN_MAX_AGE = 60 * 60 * 24 * config("CIERRE_TOKEN_DIAS", default=7, cast=int)
+ACCESO_TOKEN_MAX_AGE = 60 * 60 * 24 * config("ACCESO_TOKEN_DIAS", default=2, cast=int)
 
 PASSWORD_APROBACION_MAX_AGE = 60 * 60 * 24 * config(
     "PASSWORD_APROBACION_DIAS", default=3, cast=int

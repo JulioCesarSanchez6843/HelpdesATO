@@ -1,0 +1,14 @@
+{% extends "tickets/emails/_base.html" %}
+
+{% block contenido %}
+<p style="margin:0 0 12px;">Hola {{ ticket.creado_por.nombre }},</p>
+<p style="margin:0 0 12px;">Gracias por confirmar. Tu ticket quedó cerrado.</p>
+
+{% include "tickets/emails/_detalle.html" %}
+
+<p style="margin:16px 0 0;">Si el problema vuelve a aparecer, crea un ticket nuevo desde el sistema.</p>
+
+<p style="margin:24px 0 0;">
+{% include "tickets/emails/_boton.html" with url=url_ticket texto="Abrir el sistema" fondo="#0d6efd" color="#ffffff" %}
+</p>
+{% endblock %}

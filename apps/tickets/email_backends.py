@@ -1,3 +1,4 @@
+import base64
 import json
 from email.utils import parseaddr
 from urllib.error import HTTPError
@@ -33,6 +34,27 @@ class BrevoAPIEmailBackend(BaseEmailBackend):
             "subject": mensaje.subject,
             "textContent": mensaje.body,
         }
+
+        for contenido, tipo in getattr(mensaje, "alternatives", []):
+            if tipo == "text/html":
+                datos["htmlContent"] = contenido
+                break
+
+        adjuntos = []
+        for adjunto in mensaje.attachments:
+            if isinstance(adjunto, (tuple, list)):
+                nombre_archivo, contenido, _tipo = adjunto
+                if isinstance(contenido, str):
+                    contenido = contenido.encode("utf-8")
+                adjuntos.append(
+                    {
+                        "name": nombre_archivo,
+                        "content": base64.b64encode(contenido).decode("ascii"),
+                    }
+                )
+        if adjuntos:
+            datos["attachment"] = adjuntos
+
         peticion = Request(
             self.endpoint,
             data=json.dumps(datos).encode("utf-8"),

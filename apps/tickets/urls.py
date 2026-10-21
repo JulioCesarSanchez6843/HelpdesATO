@@ -12,6 +12,10 @@ urlpatterns = [
 
     path("confirmar/<str:token>/", views.confirmar_cierre, name="confirmar_cierre"),
 
+    path("en-proceso/<str:token>/", views.marcar_en_proceso, name="marcar_en_proceso"),
+
+    path("acceso/<str:token>/", views.acceso_directo, name="acceso_directo"),
+
     path("notificaciones/", views.lista_notificaciones, name="lista_notificaciones"),
 
     path(

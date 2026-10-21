@@ -1,0 +1,19 @@
+{% extends "tickets/emails/_base.html" %}
+
+{% block contenido %}
+<p style="margin:0 0 12px;">Hola {{ ticket.creado_por.nombre }},</p>
+<p style="margin:0 0 12px;">El administrador cerró tu ticket.</p>
+
+{% include "tickets/emails/_detalle.html" %}
+
+{% if ticket.nota_resolucion %}
+<p style="margin:16px 0 4px;font-weight:bold;">Nota de resolución</p>
+<div style="background:#e8f5ee;border-left:4px solid #198754;padding:12px 16px;margin:0 0 16px;">{{ ticket.nota_resolucion|linebreaksbr }}</div>
+{% endif %}
+
+<p style="margin:0 0 16px;">Si el problema sigue, crea un ticket nuevo desde el sistema.</p>
+
+<p style="margin:0;">
+{% include "tickets/emails/_boton.html" with url=url_ticket texto="Abrir el sistema" fondo="#0d6efd" color="#ffffff" %}
+</p>
+{% endblock %}

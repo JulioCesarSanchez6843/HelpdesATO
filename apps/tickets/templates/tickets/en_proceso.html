@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7 col-lg-6">
+
+    {% if invalido %}
+
+      <div class="card shadow-sm border-danger">
+        <div class="card-body">
+          <h4 class="card-title">Enlace no válido</h4>
+          <p class="mb-3">
+            Este enlace ya no sirve: pudo haber caducado o tu usuario ya no
+            tiene permisos. Abre el ticket desde el sistema.
+          </p>
+          <a href="{% url 'lista_tickets' %}" class="btn btn-primary">Ir al sistema</a>
+        </div>
+      </div>
+
+    {% elif resultado == "hecho" %}
+
+      <div class="card shadow-sm border-success">
+        <div class="card-body">
+          <h4 class="card-title text-success">Ticket en proceso</h4>
+          <p class="mb-3">El ticket #{{ ticket.pk }} pasó a «En proceso» y se avisó al usuario.</p>
+          <a href="{% url 'detalle_ticket' ticket.pk %}" class="btn btn-primary">Abrir el ticket</a>
+        </div>
+      </div>
+
+    {% elif resultado == "ya_atendido" %}
+
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h4 class="card-title">Este ticket ya fue atendido</h4>
+          <p class="mb-3">
+            El ticket #{{ ticket.pk }} ya está en «{{ ticket.get_estado_display }}».
+          </p>
+          <a href="{% url 'detalle_ticket' ticket.pk %}" class="btn btn-primary">Abrir el ticket</a>
+        </div>
+      </div>
+
+    {% else %}
+
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h4 class="card-title">¿Pasar el ticket a «En proceso»?</h4>
+          <p class="text-muted mb-3">Ticket #{{ ticket.pk }} — {{ ticket.titulo }}</p>
+
+          <ul class="list-unstyled mb-3">
+            <li><strong>Creado por:</strong> {{ ticket.creado_por.nombre }}</li>
+            <li><strong>Área:</strong> {{ ticket.area|default:"—" }}</li>
+          </ul>
+
+          <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-warning w-100">
+              Sí, pasar a «En proceso»
+            </button>
+          </form>
+
+          <a href="{% url 'detalle_ticket' ticket.pk %}" class="btn btn-link w-100 mt-2">
+            Prefiero abrir el ticket completo
+          </a>
+        </div>
+      </div>
+
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "tickets/emails/_base.html" %}
+
+{% block contenido %}
+<p style="margin:0 0 12px;">Hola {{ ticket.creado_por.nombre }},</p>
+<p style="margin:0 0 12px;">El equipo de soporte marcó tu ticket como <strong>resuelto</strong> y necesita tu confirmación para cerrarlo.</p>
+
+{% include "tickets/emails/_detalle.html" %}
+
+<p style="margin:16px 0 4px;font-weight:bold;">Nota de resolución</p>
+<div style="background:#e8f5ee;border-left:4px solid #198754;padding:12px 16px;margin:0 0 16px;">{{ ticket.nota_resolucion|linebreaksbr }}</div>
+
+<p style="margin:0 0 16px;">¿Puedes revisarlo, por favor? Si tu problema quedó solucionado, presiona el botón verde para cerrar el ticket.</p>
+
+<p style="margin:0 0 16px;">
+{% include "tickets/emails/_boton.html" with url=url_confirmacion texto="Sí, se resolvió — cerrar ticket" fondo="#198754" color="#ffffff" %}
+{% include "tickets/emails/_boton.html" with url=url_confirmacion texto="No se resolvió" fondo="#ffffff" color="#dc3545" borde="#dc3545" %}
+</p>
+
+<p style="margin:0;font-size:13px;color:#6c757d;">El ticket no se cerrará hasta que lo confirmes. Si el problema sigue, usa «No se resolvió» y cuéntanos qué pasa.</p>
+{% endblock %}

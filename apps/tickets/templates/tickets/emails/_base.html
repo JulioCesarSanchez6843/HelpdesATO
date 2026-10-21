@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
+<!--[if mso]>
+<xml>
+<o:OfficeDocumentSettings>
+<o:AllowPNG/>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+<![endif]-->
+<title>Helpdesk</title>
+<style>
+:root{color-scheme:light only;supported-color-schemes:light only;}
+body,table,td,p,div,span,a{font-family:Arial,Helvetica,sans-serif;}
+p{margin:0;}
+</style>
+</head>
+<body bgcolor="#f1f3f6" style="margin:0;padding:0;background:#f1f3f6;font-family:Arial,Helvetica,sans-serif;color:#212529;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f1f3f6">
+<tr>
+<td align="center" style="padding:24px 12px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:100%;max-width:600px;border-radius:8px;overflow:hidden;">
+<tr>
+<td bgcolor="#0b1b3a" style="padding:18px 28px;"><font face="Arial,Helvetica,sans-serif" size="4" color="#ffffff"><b>Helpdesk · Departamento de TI</b></font></td>
+</tr>
+<tr>
+<td bgcolor="#ffffff" style="padding:28px;font-size:15px;line-height:22px;color:#212529;">
+{% block contenido %}{% endblock %}
+</td>
+</tr>
+<tr>
+<td bgcolor="#ffffff" align="center" style="padding:16px 28px 24px 28px;border-top:1px solid #e3e6ea;">
+{% if firma_cid %}
+<img src="cid:{{ firma_cid }}" width="340" height="145" alt="Departamento de TI" border="0" style="border:0;">
+{% else %}
+<p style="font-weight:bold;color:#0b1b3a;">Departamento de TI</p>
+{% endif %}
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>

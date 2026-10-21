@@ -1,0 +1,11 @@
+{% extends "tickets/emails/_base.html" %}
+
+{% block contenido %}
+<p style="margin:0 0 12px;">{{ ticket.creado_por.nombre }} confirmó que el problema quedó resuelto. El ticket se cerró.</p>
+
+{% include "tickets/emails/_detalle.html" with mostrar_autor=True %}
+
+<p style="margin:24px 0 0;">
+{% include "tickets/emails/_boton.html" with url=url_ticket texto="Ver ticket" fondo="#0d6efd" color="#ffffff" %}
+</p>
+{% endblock %}

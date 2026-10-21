@@ -8,11 +8,12 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django.contrib.auth import login
 
 from apps.accounts.decorators import admin_required
 from apps.catalog.models import Area, Categoria
 
-from . import services
+from . import acceso, services
 from .forms import TicketForm, TicketGestionForm
 from .imagenes import ImagenInvalida
 from .models import AdjuntoTicket, Ticket
@@ -275,6 +276,55 @@ def confirmar_cierre(request, token):
         )
 
     return render(request, "tickets/confirmar_cierre.html", {"ticket": ticket})
+
+def acceso_directo(request, token):
+    usuario, ticket_pk = acceso.datos_desde_token(token)
+
+    if usuario is None or ticket_pk is None:
+        messages.info(request, "El enlace venció. Inicia sesión para continuar.")
+        return redirect("login")
+
+    if request.user.pk != usuario.pk:
+        login(request, usuario, backend="django.contrib.auth.backends.ModelBackend")
+
+    return redirect("detalle_ticket", pk=ticket_pk)
+
+def marcar_en_proceso(request, token):
+    ticket, admin = services.ticket_y_admin_desde_token(token)
+
+    if ticket is None:
+        return render(
+            request,
+            "tickets/en_proceso.html",
+            {"invalido": True},
+            status=400,
+        )
+
+    if request.user.pk != admin.pk:
+        login(request, admin, backend="django.contrib.auth.backends.ModelBackend")
+
+    if ticket.estado != Ticket.Estado.ABIERTO:
+        return render(
+            request,
+            "tickets/en_proceso.html",
+            {"ticket": ticket, "resultado": "ya_atendido"},
+        )
+
+    if request.method == "POST":
+        with transaction.atomic():
+            ticket = Ticket.objects.select_for_update().get(pk=ticket.pk)
+            if ticket.estado == Ticket.Estado.ABIERTO:
+                services.poner_en_proceso(ticket, admin)
+                resultado = "hecho"
+            else:
+                resultado = "ya_atendido"
+        return render(
+            request,
+            "tickets/en_proceso.html",
+            {"ticket": ticket, "resultado": resultado},
+        )
+
+    return render(request, "tickets/en_proceso.html", {"ticket": ticket})
 
 
 @admin_required

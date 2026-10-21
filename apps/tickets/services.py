@@ -10,6 +10,7 @@ from . import emails, imagenes
 from .models import AdjuntoTicket, Historial, Notificacion, Ticket
 
 _SAL_TOKEN = "tickets.confirmar-cierre"
+_SAL_PROCESO = "tickets.marcar-en-proceso"
 
 
 def _admins_activos():
@@ -47,6 +48,11 @@ def _url_confirmacion(ticket):
     return settings.SITE_URL + reverse("confirmar_cierre", args=[token])
 
 
+def _url_en_proceso(ticket, admin):
+    token = signing.dumps({"t": ticket.pk, "a": admin.pk}, salt=_SAL_PROCESO)
+    return settings.SITE_URL + reverse("marcar_en_proceso", args=[token])
+
+
 def _contexto(ticket, **extra):
     return {"ticket": ticket, "url_ticket": _url_ticket(ticket), **extra}
 
@@ -76,6 +82,32 @@ def ticket_desde_token(token):
     ):
         return None
     return ticket
+
+
+def ticket_y_admin_desde_token(token):
+    try:
+        datos = signing.loads(
+            token, salt=_SAL_PROCESO, max_age=settings.CIERRE_TOKEN_MAX_AGE
+        )
+    except signing.BadSignature:
+        return None, None
+
+    ticket = (
+        Ticket.objects.select_related("creado_por", "area", "categoria")
+        .filter(pk=datos.get("t"))
+        .first()
+    )
+    admin = Usuario.objects.filter(pk=datos.get("a"), activo=True).first()
+    if ticket is None or admin is None or not admin.es_admin:
+        return None, None
+    return ticket, admin
+
+
+def poner_en_proceso(ticket, admin):
+    antes = snapshot(ticket)
+    ticket.estado = Ticket.Estado.EN_PROCESO
+    ticket.save(update_fields=["estado"])
+    registrar_gestion(ticket, admin, antes)
 
 
 def guardar_adjuntos(ticket, archivos, autor):
@@ -110,11 +142,19 @@ def registrar_creacion(ticket, autor):
     )
 
     contexto = _contexto(ticket)
+    imagenes_ticket = [
+        (f"imagen{a.pk}", bytes(a.contenido), a.tipo_contenido)
+        for a in ticket.adjuntos.all()
+    ]
     mensajes = emails.construir(
         _sin(admins, autor),
         f"Nuevo ticket #{ticket.pk}: {ticket.titulo}",
         "nuevo_ticket_admin",
         contexto,
+        imagenes=imagenes_ticket,
+        contexto_usuario=lambda admin: {
+            "url_en_proceso": _url_en_proceso(ticket, admin)
+        },
     )
     mensajes += emails.construir(
         [ticket.creado_por],
