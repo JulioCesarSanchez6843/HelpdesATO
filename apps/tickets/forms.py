@@ -10,6 +10,10 @@ class MultipleFileInput(forms.FileInput):
     allow_multiple_selected = True
 
 
+EXTENSIONES_PERMITIDAS = (".jpg", ".jpeg", ".png")
+TIPOS_PERMITIDOS = ("image/jpeg", "image/png")
+
+
 class MultipleImageField(forms.ImageField):
     widget = MultipleFileInput
 
@@ -22,26 +26,54 @@ class MultipleImageField(forms.ImageField):
         if len(archivos) > maximo:
             raise forms.ValidationError(f"Puedes adjuntar máximo {maximo} imágenes.")
 
+        limite = settings.ADJUNTOS_MAX_MB * 1024 * 1024
         limpios = []
+        errores = []
+
         for archivo in archivos:
-            if archivo.size > settings.ADJUNTOS_MAX_MB * 1024 * 1024:
-                raise forms.ValidationError(
+            if not archivo.name.lower().endswith(EXTENSIONES_PERMITIDAS):
+                errores.append(f"«{archivo.name}»: solo se permiten imágenes JPG o PNG.")
+                continue
+
+            if archivo.size > limite:
+                errores.append(
                     f"«{archivo.name}» pesa más de {settings.ADJUNTOS_MAX_MB} MB."
                 )
-            limpios.append(super().clean(archivo, initial))
-        return limpios
+                continue
 
+            try:
+                limpio = super().clean(archivo, initial)
+            except forms.ValidationError:
+                errores.append(f"«{archivo.name}» no es una imagen válida.")
+                continue
+
+            if getattr(limpio, "content_type", None) not in TIPOS_PERMITIDOS:
+                errores.append(f"«{archivo.name}»: solo se permiten imágenes JPG o PNG.")
+                continue
+
+            limpios.append(limpio)
+
+        if errores:
+            raise forms.ValidationError(errores)
+
+        return limpios
 
 class TicketForm(BootstrapFormMixin, forms.ModelForm):
     imagenes = MultipleImageField(
         label="Imágenes o fotos (opcional)",
         required=False,
+        widget=MultipleFileInput(
+            attrs={
+                "accept": ".jpg,.jpeg,.png,image/jpeg,image/png",
+                "data-max-mb": settings.ADJUNTOS_MAX_MB,
+                "data-max-files": settings.ADJUNTOS_MAX_ARCHIVOS,
+            }
+        ),
         help_text=(
-            f"Hasta {settings.ADJUNTOS_MAX_ARCHIVOS} imágenes de "
+            f"Solo JPG o PNG. Hasta {settings.ADJUNTOS_MAX_ARCHIVOS} imágenes de "
             f"{settings.ADJUNTOS_MAX_MB} MB cada una. Desde el celular puedes tomar la foto."
         ),
     )
-
     class Meta:
         model = Ticket
         fields = ["titulo", "descripcion"]

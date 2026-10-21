@@ -9,6 +9,8 @@
     si ayuda, agrega fotos o capturas de pantalla.
 </p>
 
+<div class="row">
+
 <form method="post" enctype="multipart/form-data" class="col-md-7">
 
     {% csrf_token %}
@@ -20,5 +22,97 @@
     <a href="{% url 'lista_tickets' %}" class="btn btn-outline-secondary">Cancelar</a>
 
 </form>
+
+<div class="col-md-5">
+    <div class="card">
+        <div class="card-body">
+            <h6 class="card-title">Vista previa de imágenes</h6>
+            <p id="vistaPreviaVacia" class="text-muted small mb-0">Aquí verás las imágenes que adjuntes.</p>
+            <div id="vistaPreviaLista" class="d-grid gap-2"></div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<script>
+(function () {
+    const input = document.getElementById("id_imagenes");
+    if (!input) return;
+
+    const maxMB = parseInt(input.dataset.maxMb, 10);
+    const maxArchivos = parseInt(input.dataset.maxFiles, 10);
+    const tiposValidos = ["image/jpeg", "image/png"];
+    const lista = document.getElementById("vistaPreviaLista");
+    const vacio = document.getElementById("vistaPreviaVacia");
+    let urls = [];
+
+    const aviso = document.createElement("div");
+    aviso.className = "text-danger small mt-1";
+    input.insertAdjacentElement("afterend", aviso);
+
+    function limpiarVistaPrevia() {
+        urls.forEach(function (url) {
+            URL.revokeObjectURL(url);
+        });
+        urls = [];
+        lista.innerHTML = "";
+        vacio.classList.remove("d-none");
+    }
+
+    function mostrarVistaPrevia(archivos) {
+        limpiarVistaPrevia();
+        if (!archivos.length) return;
+
+        vacio.classList.add("d-none");
+        const unica = archivos.length === 1;
+        lista.style.gridTemplateColumns = unica ? "1fr" : "repeat(auto-fill, minmax(150px, 1fr))";
+
+        archivos.forEach(function (archivo) {
+            const url = URL.createObjectURL(archivo);
+            urls.push(url);
+
+            const img = document.createElement("img");
+            img.src = url;
+            img.alt = archivo.name;
+            img.title = archivo.name;
+            img.style.width = "100%";
+            img.style.borderRadius = "12px";
+            img.style.height = unica ? "auto" : "150px";
+            img.style.maxHeight = unica ? "360px" : "150px";
+            img.style.objectFit = unica ? "contain" : "cover";
+            lista.appendChild(img);
+        });
+    }
+
+    input.addEventListener("change", function () {
+        const archivos = Array.from(input.files);
+        const errores = [];
+
+        if (archivos.length > maxArchivos) {
+            errores.push("Puedes adjuntar máximo " + maxArchivos + " imágenes.");
+        }
+
+        archivos.forEach(function (archivo) {
+            const nombre = archivo.name.toLowerCase();
+            const extensionOk = /\.(jpe?g|png)$/.test(nombre);
+            if (!extensionOk || !tiposValidos.includes(archivo.type)) {
+                errores.push("«" + archivo.name + "»: solo se permiten imágenes JPG o PNG.");
+            } else if (archivo.size > maxMB * 1024 * 1024) {
+                errores.push("«" + archivo.name + "» pesa más de " + maxMB + " MB.");
+            }
+        });
+
+        if (errores.length) {
+            aviso.innerHTML = errores.join("<br>");
+            input.value = "";
+            limpiarVistaPrevia();
+        } else {
+            aviso.textContent = "";
+            mostrarVistaPrevia(archivos);
+        }
+    });
+})();
+</script>
 
 {% endblock %}

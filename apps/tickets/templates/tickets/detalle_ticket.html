@@ -75,20 +75,61 @@
 
                     <div class="d-flex flex-wrap gap-2">
                         {% for adjunto in adjuntos %}
-                            <a href="{% url 'ver_adjunto' adjunto.pk %}" target="_blank" rel="noopener">
+                            <button
+                                type="button"
+                                class="p-0 border-0 bg-transparent"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalImagen"
+                                data-src="{% url 'ver_adjunto' adjunto.pk %}"
+                                data-nombre="{{ adjunto.nombre }}"
+                                aria-label="Ver {{ adjunto.nombre }}"
+                            >
                                 <img
                                     src="{% url 'ver_adjunto' adjunto.pk %}"
                                     alt="{{ adjunto.nombre }}"
-                                    class="img-thumbnail"
-                                    style="max-width: 180px; max-height: 180px; object-fit: cover;"
+                                    loading="lazy"
+                                    style="width: 120px; height: 120px; object-fit: cover; border-radius: 12px; cursor: zoom-in;"
                                 >
-                            </a>
+                            </button>
                         {% endfor %}
                     </div>
 
                 </div>
 
             </div>
+
+            <div class="modal fade" id="modalImagen" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content bg-dark border-0">
+                        <div class="modal-header border-0">
+                            <h6 class="modal-title text-white text-truncate" id="modalImagenNombre"></h6>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                        </div>
+                        <div class="modal-body text-center pt-0">
+                            <img id="modalImagenImg" src="" alt="" class="img-fluid rounded" style="max-height: 75vh;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+            (function () {
+                const modal = document.getElementById("modalImagen");
+                const img = document.getElementById("modalImagenImg");
+                const nombre = document.getElementById("modalImagenNombre");
+
+                modal.addEventListener("show.bs.modal", function (evento) {
+                    const boton = evento.relatedTarget;
+                    img.src = boton.dataset.src;
+                    img.alt = boton.dataset.nombre;
+                    nombre.textContent = boton.dataset.nombre;
+                });
+
+                modal.addEventListener("hidden.bs.modal", function () {
+                    img.src = "";
+                });
+            })();
+            </script>
 
         {% endif %}
 

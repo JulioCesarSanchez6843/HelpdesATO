@@ -15,7 +15,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # apps propias del proyecto (se agregan conforme se construyen)
     "apps.catalog",
     "apps.accounts",
     "apps.tickets",
@@ -140,4 +139,4 @@ LOGGING = {
 }
 
 ADJUNTOS_MAX_ARCHIVOS = 5
-ADJUNTOS_MAX_MB = 5
+ADJUNTOS_MAX_MB = 10

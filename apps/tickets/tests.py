@@ -220,6 +220,16 @@ class AdjuntosTests(BaseTicketsTest):
         self.assertIn("imagenes", r.context["form"].errors)
         self.assertEqual(Ticket.objects.count(), 0)
 
+    def test_solo_se_permiten_jpg_y_png(self):
+        r = self.crear_con_imagen(imagenes=imagen("foto.gif", formato="GIF"))
+        self.assertIn("imagenes", r.context["form"].errors)
+        self.assertEqual(Ticket.objects.count(), 0)
+
+    def test_png_o_jpg_validos_se_aceptan(self):
+        self.crear_con_imagen(imagenes=imagen("captura.png", formato="PNG"))
+        self.assertEqual(Ticket.objects.count(), 1)
+        self.assertEqual(AdjuntoTicket.objects.count(), 1)
+
     def test_se_muestran_en_el_detalle_del_ticket(self):
         self.crear_con_imagen()
         ticket = Ticket.objects.get()
@@ -719,3 +729,4 @@ class FiltrosTests(BaseTicketsTest):
         r = self.client.get(reverse("reportes"))
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.context["graficas"]["distribucion"]["data"], [1, 0, 1, 0])
+
