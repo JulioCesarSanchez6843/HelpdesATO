@@ -1,38 +1,52 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Helpdesk</title>
+    <title>Helpdesk Tollocan</title>
+    <link rel="icon" type="image/png" href="{% static 'img/Logo_tollocan.png' %}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="{% static 'css/tollocan.css' %}" rel="stylesheet">
+    <link href="{% static 'css/tollocan.css' %}" rel="stylesheet">
 </head>
 <body class="bg-light">
     {% if user.is_authenticated %}
-    <nav class="navbar navbar-expand navbar-light bg-white border-bottom px-3">
-        <span class="navbar-brand fw-bold">HD Helpdesk</span>
-        <div class="navbar-nav me-auto">
-        {% if user.es_admin %}
-                <a class="nav-link" href="{% url 'lista_tickets' %}">Tickets</a>
-                <a class="nav-link" href="{% url 'lista_usuarios' %}">Usuarios</a>
-                <a class="nav-link" href="{% url 'lista_areas' %}">Áreas</a>
-                <a class="nav-link" href="{% url 'lista_categorias' %}">Categorías</a>
-                <a class="nav-link" href="{% url 'lista_puestos' %}">Puestos</a>
-                <a class="nav-link" href="{% url 'reportes' %}">Reportes</a>
-            {% else %}
-                <a class="nav-link" href="{% url 'lista_tickets' %}">Mis Tickets</a>
-            {% endif %}
-        </div>
-        <div class="navbar-nav align-items-center">
-            <a class="nav-link" href="{% url 'lista_notificaciones' %}" title="Notificaciones">
-                🔔{% if notificaciones_sin_leer %}<span class="badge rounded-pill bg-danger">{{ notificaciones_sin_leer }}</span>{% endif %}
-            </a>
-            <span class="navbar-text mx-2">{{ user.nombre }}</span>
-            <form method="post" action="{% url 'logout' %}" class="d-inline">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-outline-secondary">Salir</button>
-            </form>
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-tollocan px-3">
+        <a class="navbar-brand d-flex align-items-center fw-bold" href="{% url 'lista_tickets' %}">
+            <img src="{% static 'img/Logo_tollocan.png' %}" alt="Logo Tollocan" class="logo-navbar me-3">
+            Helpdesk Tollocan
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPrincipal" aria-controls="menuPrincipal" aria-expanded="false" aria-label="Mostrar menú">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="menuPrincipal">
+            <div class="navbar-nav me-auto">
+                {% if user.es_admin %}
+                <a class="nav-link {% if request.resolver_match.url_name == 'lista_tickets' %}active{% endif %}" href="{% url 'lista_tickets' %}"><i class="bi bi-ticket-perforated me-1"></i>Tickets</a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'lista_usuarios' %}active{% endif %}" href="{% url 'lista_usuarios' %}"><i class="bi bi-people me-1"></i>Usuarios</a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'lista_areas' %}active{% endif %}" href="{% url 'lista_areas' %}"><i class="bi bi-diagram-3 me-1"></i>Áreas</a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'lista_categorias' %}active{% endif %}" href="{% url 'lista_categorias' %}"><i class="bi bi-tags me-1"></i>Categorías</a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'lista_puestos' %}active{% endif %}" href="{% url 'lista_puestos' %}"><i class="bi bi-briefcase me-1"></i>Puestos</a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'reportes' %}active{% endif %}" href="{% url 'reportes' %}"><i class="bi bi-bar-chart-line me-1"></i>Reportes</a>
+                {% else %}
+                <a class="nav-link {% if request.resolver_match.url_name == 'lista_tickets' %}active{% endif %}" href="{% url 'lista_tickets' %}"><i class="bi bi-ticket-perforated me-1"></i>Mis Tickets</a>
+                {% endif %}
+            </div>
+            <div class="navbar-nav align-items-lg-center">
+                <a class="nav-link" href="{% url 'lista_notificaciones' %}" title="Notificaciones">
+                    <i class="bi bi-bell-fill"></i>{% if notificaciones_sin_leer %}<span class="badge rounded-pill bg-danger ms-1">{{ notificaciones_sin_leer }}</span>{% endif %}
+                </a>
+                <span class="navbar-text mx-lg-3"><i class="bi bi-person-circle me-1"></i>{{ user.nombre }}</span>
+                <form method="post" action="{% url 'logout' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-light"><i class="bi bi-box-arrow-right me-1"></i>Salir</button>
+                </form>
+            </div>
         </div>
     </nav>
+
     {% endif %}
 
     <div class="container mt-4">
