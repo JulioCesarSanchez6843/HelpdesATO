@@ -1,14 +1,16 @@
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from .decorators import admin_required
-from .forms import UsuarioCrearForm, UsuarioEditarForm
-from .models import Usuario
+from .forms import FotoPerfilForm, UsuarioCrearForm, UsuarioEditarForm
+from .models import FotoPerfil, Usuario
 
 
 def login_view(request):
@@ -103,3 +105,31 @@ def cambiar_estado_usuario(request, pk):
         estado = "activado" if usuario.activo else "desactivado"
         messages.success(request, f"Usuario «{usuario.nombre}» {estado}.")
     return redirect("lista_usuarios")
+
+@login_required
+def mi_perfil(request):
+    if request.method == "POST":
+        if request.POST.get("accion") == "eliminar":
+            FotoPerfil.objects.filter(usuario=request.user).delete()
+            messages.success(request, "Foto de perfil eliminada.")
+            return redirect("mi_perfil")
+        form = FotoPerfilForm(request.POST, request.FILES)
+        if form.is_valid():
+            FotoPerfil.objects.update_or_create(
+                usuario=request.user,
+                defaults={"contenido": form.cleaned_data["foto"]},
+            )
+            messages.success(request, "Foto de perfil actualizada.")
+            return redirect("mi_perfil")
+    else:
+        form = FotoPerfilForm()
+    return render(request, "accounts/perfil.html", {"form": form})
+
+
+@login_required
+def foto_usuario(request, pk):
+    foto = get_object_or_404(FotoPerfil, usuario_id=pk)
+    respuesta = HttpResponse(bytes(foto.contenido), content_type="image/jpeg")
+    respuesta["X-Content-Type-Options"] = "nosniff"
+    respuesta["Cache-Control"] = "private, max-age=3600"
+    return respuesta

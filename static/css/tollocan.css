@@ -45,6 +45,130 @@
     font-weight: 600;
 }
 
+.layout-app {
+    display: flex;
+    align-items: flex-start;
+    min-height: 100vh;
+}
+
+.sidebar-tollocan {
+    position: sticky;
+    top: 0;
+    flex: 0 0 64px;
+    width: 64px;
+    height: 100vh;
+    padding-top: 0.5rem;
+    background-color: var(--tollocan-gris);
+    border-right: 3px solid var(--tollocan-rojo);
+    overflow-x: hidden;
+    overflow-y: auto;
+    transition: width 0.2s ease, flex-basis 0.2s ease;
+    z-index: 1030;
+}
+
+.menu-expandido .sidebar-tollocan {
+    flex-basis: 230px;
+    width: 230px;
+}
+
+.sidebar-tollocan .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.8rem 1rem;
+    color: rgba(255, 255, 255, 0.8);
+    white-space: nowrap;
+    border-left: 4px solid transparent;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.sidebar-tollocan .nav-link i {
+    flex: 0 0 1.5rem;
+    font-size: 1.35rem;
+    text-align: center;
+}
+
+.sidebar-tollocan .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+}
+
+.sidebar-tollocan .nav-link.active {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-left-color: var(--tollocan-rojo);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.sidebar-tollocan .etiqueta {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.menu-expandido .sidebar-tollocan .etiqueta {
+    opacity: 1;
+}
+
+.contenido-app {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.fondo-menu {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1040;
+}
+
+.avatar-nav {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.7);
+}
+
+.avatar-perfil {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--tollocan-rojo);
+}
+
+.avatar-vacio {
+    font-size: 8rem;
+    line-height: 1;
+    color: #adb5bd;
+}
+
+@media (max-width: 767.98px) {
+    .sidebar-tollocan {
+        position: fixed;
+        top: 0;
+        left: 0;
+        flex-basis: auto;
+        width: 230px;
+        transform: translateX(-100%);
+        transition: transform 0.2s ease;
+        z-index: 1045;
+    }
+
+    .menu-movil-abierto .sidebar-tollocan {
+        transform: none;
+    }
+
+    .menu-movil-abierto .fondo-menu {
+        display: block;
+    }
+
+    .sidebar-tollocan .etiqueta {
+        opacity: 1;
+    }
+}
+
 .logo-navbar {
     height: 68px;
     filter: invert(1);
@@ -76,4 +200,101 @@
 .form-select:focus {
     border-color: #c8102e;
     box-shadow: 0 0 0 0.25rem rgba(200, 16, 46, 0.25);
+}
+
+.perfil-tarjeta {
+    border: 0;
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+.perfil-portada {
+    height: 100px;
+    background: linear-gradient(135deg, var(--tollocan-gris), var(--tollocan-rojo));
+}
+
+.perfil-cuerpo {
+    padding-bottom: 1.5rem;
+}
+
+.avatar-editable {
+    position: relative;
+    display: inline-block;
+    width: 160px;
+    height: 160px;
+    margin-top: -80px;
+    border-radius: 50%;
+    background-color: #ffffff;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+}
+
+.avatar-editable .avatar-perfil {
+    display: block;
+    border-width: 4px;
+    border-color: #ffffff;
+}
+
+.avatar-editable .avatar-vacio {
+    display: block;
+    font-size: 160px;
+    border-radius: 50%;
+}
+
+.avatar-camara {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+    background-color: var(--tollocan-rojo);
+    color: #ffffff;
+    font-size: 1rem;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.avatar-editable:hover .avatar-camara {
+    background-color: var(--tollocan-rojo-oscuro);
+    transform: scale(1.12);
+}
+
+.perfil-dato {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    height: 100%;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    background-color: #f8f9fa;
+    border: 1px solid #eef0f2;
+}
+
+.perfil-dato-icono {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: rgba(200, 16, 46, 0.1);
+    color: var(--tollocan-rojo);
+    font-size: 1.25rem;
+}
+
+.perfil-dato-etiqueta {
+    font-size: 0.72rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #6c757d;
+}
+
+.perfil-dato-valor {
+    font-weight: 600;
+    word-break: break-word;
 }

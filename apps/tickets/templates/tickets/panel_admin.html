@@ -19,33 +19,6 @@
     <div class="col-6 col-md">
 
         <a
-            href="{% url 'lista_tickets' %}"
-            class="text-decoration-none"
-        >
-
-            <div class="card shadow-sm h-100">
-
-                <div class="card-body">
-
-                    <h3 class="mb-0 text-secondary">
-                        {{ conteos.total }}
-                    </h3>
-
-                    <small class="text-muted">
-                        Total
-                    </small>
-
-                </div>
-
-            </div>
-
-        </a>
-
-    </div>
-
-    <div class="col-6 col-md">
-
-        <a
             href="?estado=ABIERTO"
             class="text-decoration-none"
         >
@@ -141,6 +114,33 @@
 
                     <small class="text-muted">
                         Cerrados
+                    </small>
+
+                </div>
+
+            </div>
+
+        </a>
+
+    </div>
+
+    <div class="col-6 col-md">
+
+        <a
+            href="{% url 'lista_tickets' %}"
+            class="text-decoration-none"
+        >
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h3 class="mb-0 text-secondary">
+                        {{ conteos.total }}
+                    </h3>
+
+                    <small class="text-muted">
+                        Total
                     </small>
 
                 </div>

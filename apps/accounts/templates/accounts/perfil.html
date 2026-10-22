@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block content %}
+<h3 class="mb-3">Mi perfil</h3>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card perfil-tarjeta shadow-sm">
+            <div class="perfil-portada"></div>
+            <div class="card-body text-center perfil-cuerpo">
+                <form method="post" enctype="multipart/form-data" id="formFoto">
+                    {% csrf_token %}
+                    <label for="inputFoto" class="avatar-editable" title="Cambiar foto">
+                        {% if foto_version %}
+                        <img src="{% url 'foto_usuario' user.pk %}?v={{ foto_version }}" alt="Foto de perfil" class="avatar-perfil">
+                        {% else %}
+                        <i class="bi bi-person-circle avatar-vacio"></i>
+                        {% endif %}
+                        <span class="avatar-camara"><i class="bi bi-camera-fill"></i></span>
+                    </label>
+                    <input type="file" name="foto" id="inputFoto" accept="image/jpeg,image/png" class="d-none">
+                </form>
+
+                {% for error in form.foto.errors %}
+                <div class="text-danger small mt-2">{{ error }}</div>
+                {% endfor %}
+
+                <h4 class="mt-3 mb-1">{{ user.nombre }}</h4>
+                <p class="text-muted mb-2">{{ user.correo }}</p>
+                <span class="badge bg-primary">{{ user.get_rol_display }}</span>
+
+                <p class="form-text mt-3 mb-0">Haz clic en tu foto para cambiarla. JPG o PNG, máximo 5 MB.</p>
+
+                {% if foto_version %}
+                <form method="post" class="mt-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="eliminar">
+                    <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash me-1"></i>Quitar foto</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card perfil-tarjeta shadow-sm">
+            <div class="card-body p-4">
+                <h5 class="mb-4"><i class="bi bi-person-vcard text-primary me-2"></i>Información de la cuenta</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="perfil-dato">
+                            <div class="perfil-dato-icono"><i class="bi bi-person"></i></div>
+                            <div>
+                                <div class="perfil-dato-etiqueta">Nombre</div>
+                                <div class="perfil-dato-valor">{{ user.nombre }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="perfil-dato">
+                            <div class="perfil-dato-icono"><i class="bi bi-envelope"></i></div>
+                            <div>
+                                <div class="perfil-dato-etiqueta">Correo</div>
+                                <div class="perfil-dato-valor">{{ user.correo }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="perfil-dato">
+                            <div class="perfil-dato-icono"><i class="bi bi-diagram-3"></i></div>
+                            <div>
+                                <div class="perfil-dato-etiqueta">Área</div>
+                                <div class="perfil-dato-valor">{{ user.area.nombre|default:"Sin asignar" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="perfil-dato">
+                            <div class="perfil-dato-icono"><i class="bi bi-briefcase"></i></div>
+                            <div>
+                                <div class="perfil-dato-etiqueta">Puesto</div>
+                                <div class="perfil-dato-valor">{{ user.puesto.nombre|default:"Sin asignar" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="perfil-dato">
+                            <div class="perfil-dato-icono"><i class="bi bi-shield-check"></i></div>
+                            <div>
+                                <div class="perfil-dato-etiqueta">Rol</div>
+                                <div class="perfil-dato-valor">{{ user.get_rol_display }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="perfil-dato">
+                            <div class="perfil-dato-icono"><i class="bi bi-calendar3"></i></div>
+                            <div>
+                                <div class="perfil-dato-etiqueta">Miembro desde</div>
+                                <div class="perfil-dato-valor">{{ user.creado_en|date:"d/m/Y" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById("inputFoto").addEventListener("change", function () {
+        if (this.files.length) {
+            document.getElementById("formFoto").submit();
+        }
+    });
+</script>
+
+{% endblock %}

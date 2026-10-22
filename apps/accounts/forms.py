@@ -1,9 +1,11 @@
+from io import BytesIO
+
 from django import forms
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from PIL import Image, ImageOps
 
 from .models import Usuario
-
 
 class BootstrapFormMixin:
     def __init__(self, *args, **kwargs):
@@ -114,3 +116,27 @@ class UsuarioEditarForm(_UsuarioBaseForm):
         if commit:
             usuario.save()
         return usuario
+
+class FotoPerfilForm(BootstrapFormMixin, forms.Form):
+    foto = forms.ImageField(
+        label="Nueva foto",
+        help_text="JPG o PNG, máximo 10 MB. Se recorta en cuadrado.",
+        widget=forms.ClearableFileInput(attrs={"accept": "image/jpeg,image/png"}),
+    )
+
+    def clean_foto(self):
+        archivo = self.cleaned_data["foto"]
+        if archivo.size > 5 * 1024 * 1024:
+            raise ValidationError("La imagen no puede pesar más de 5 MB.")
+        try:
+            archivo.seek(0)
+            imagen = Image.open(archivo)
+            imagen = ImageOps.exif_transpose(imagen).convert("RGBA")
+            fondo = Image.new("RGB", imagen.size, (255, 255, 255))
+            fondo.paste(imagen, mask=imagen.getchannel("A"))
+            fondo = ImageOps.fit(fondo, (256, 256), Image.LANCZOS)
+            salida = BytesIO()
+            fondo.save(salida, format="JPEG", quality=85, optimize=True)
+        except Exception:
+            raise ValidationError("No se pudo procesar la imagen.")
+        return salida.getvalue()

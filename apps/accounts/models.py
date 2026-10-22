@@ -128,3 +128,14 @@ class SolicitudCambioPassword(models.Model):
             f"Cambio de contraseña de {self.usuario} pedido por "
             f"{self.solicitante} ({self.get_estado_display()})"
         )
+class FotoPerfil(models.Model):
+    usuario = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="foto_perfil",
+    )
+    contenido = models.BinaryField()
+    actualizada_en = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Foto de {self.usuario}"
