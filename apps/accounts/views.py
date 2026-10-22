@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import HttpResponse
@@ -9,9 +9,19 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from .decorators import admin_required
-from .forms import FotoPerfilForm, UsuarioCrearForm, UsuarioEditarForm
+from .forms import CambiarPasswordForm, FotoPerfilForm, UsuarioCrearForm, UsuarioEditarForm
 from .models import FotoPerfil, Usuario
+from apps.catalog.models import Sucursal
 
+
+def _usuarios_gestionables(solicitante):
+    usuarios = Usuario.objects.select_related("area", "puesto", "sucursal")
+    if solicitante.es_superadmin:
+        return usuarios
+    return usuarios.filter(sucursal_id=solicitante.sucursal_id).filter(
+        Q(pk=solicitante.pk)
+        | Q(rol__in=[Usuario.Rol.BECARIO, Usuario.Rol.USUARIO])
+    )
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -45,36 +55,48 @@ def logout_view(request):
     logout(request)
     return redirect("login")
 
-
 @admin_required
 def lista_usuarios(request):
     q = request.GET.get("q", "").strip()
-    usuarios = Usuario.objects.select_related("area", "puesto")
+    sucursal = request.GET.get("sucursal", "")
+    usuarios = _usuarios_gestionables(request.user)
     if q:
         usuarios = usuarios.filter(Q(nombre__icontains=q) | Q(correo__icontains=q))
-    return render(request, "accounts/usuarios.html", {"usuarios": usuarios, "q": q})
+    if request.user.es_superadmin and sucursal.isdigit():
+        usuarios = usuarios.filter(sucursal_id=int(sucursal))
+    else:
+        sucursal = ""
+    return render(request, "accounts/usuarios.html", {
+        "usuarios": usuarios,
+        "q": q,
+        "sucursal_sel": sucursal,
+        "sucursales": Sucursal.objects.all(),
+    })
 
 
 @admin_required
 def nuevo_usuario(request):
     if request.method == "POST":
-        form = UsuarioCrearForm(request.POST)
+        form = UsuarioCrearForm(request.POST, solicitante=request.user)
         if form.is_valid():
             usuario = form.save()
             messages.success(request, f"Usuario «{usuario.nombre}» creado.")
             return redirect("lista_usuarios")
     else:
-        form = UsuarioCrearForm()
+        form = UsuarioCrearForm(solicitante=request.user)
     return render(request, "accounts/usuario_form.html", {"form": form, "titulo": "Nuevo usuario"})
 
 
 @admin_required
 def editar_usuario(request, pk):
-    usuario = get_object_or_404(Usuario, pk=pk)
+    usuario = get_object_or_404(_usuarios_gestionables(request.user), pk=pk)
     es_el_mismo = usuario.pk == request.user.pk
 
     if request.method == "POST":
-        form = UsuarioEditarForm(request.POST, instance=usuario, editando_a_si_mismo=es_el_mismo)
+        form = UsuarioEditarForm(
+            request.POST, instance=usuario,
+            editando_a_si_mismo=es_el_mismo, solicitante=request.user,
+        )
         if form.is_valid():
             usuario = form.save()
             nueva = form.nueva_password
@@ -86,7 +108,9 @@ def editar_usuario(request, pk):
                 messages.success(request, f"Usuario «{usuario.nombre}» actualizado.")
             return redirect("lista_usuarios")
     else:
-        form = UsuarioEditarForm(instance=usuario, editando_a_si_mismo=es_el_mismo)
+        form = UsuarioEditarForm(
+            instance=usuario, editando_a_si_mismo=es_el_mismo, solicitante=request.user,
+        )
     return render(request, "accounts/usuario_form.html", {
         "form": form, "titulo": f"Editar usuario — {usuario.nombre}",
         "es_el_mismo": es_el_mismo,
@@ -96,7 +120,7 @@ def editar_usuario(request, pk):
 @admin_required
 @require_POST
 def cambiar_estado_usuario(request, pk):
-    usuario = get_object_or_404(Usuario, pk=pk)
+    usuario = get_object_or_404(_usuarios_gestionables(request.user), pk=pk)
     if usuario.pk == request.user.pk:
         messages.error(request, "No puedes desactivar tu propia cuenta.")
     else:
@@ -133,3 +157,18 @@ def foto_usuario(request, pk):
     respuesta["X-Content-Type-Options"] = "nosniff"
     respuesta["Cache-Control"] = "private, max-age=3600"
     return respuesta
+
+@login_required
+def cambiar_password(request):
+    if request.method == "POST":
+        form = CambiarPasswordForm(request.user, request.POST)
+        if form.is_valid():
+            usuario = form.save()
+            usuario.debe_cambiar_password = False
+            usuario.save(update_fields=["debe_cambiar_password"])
+            update_session_auth_hash(request, usuario)
+            messages.success(request, "Contraseña actualizada.")
+            return redirect("lista_tickets")
+    else:
+        form = CambiarPasswordForm(request.user)
+    return render(request, "accounts/cambiar_password.html", {"form": form})

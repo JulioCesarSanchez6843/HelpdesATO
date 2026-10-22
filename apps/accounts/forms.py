@@ -2,8 +2,11 @@ from io import BytesIO
 
 from django import forms
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.forms import SetPasswordForm
 from django.core.exceptions import ValidationError
 from PIL import Image, ImageOps
+
+from apps.catalog.models import Sucursal
 
 from .models import Usuario
 
@@ -31,13 +34,34 @@ class _UsuarioBaseForm(BootstrapFormMixin, forms.ModelForm):
         widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}),
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, solicitante=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.solicitante = solicitante
         self.fields["area"].required = True
         self.fields["puesto"].required = False
+        self.fields["sucursal"].required = False
+        self.fields["sucursal"].queryset = Sucursal.objects.all()
         self.fields["correo"].required = True
         self.fields["correo"].error_messages["required"] = "El correo es obligatorio."
         self.fields["correo"].error_messages["invalid"] = "Escribe un correo válido, por ejemplo nombre@empresa.com."
+        self._limitar_al_solicitante()
+
+    def _limitar_al_solicitante(self):
+        solicitante = self.solicitante
+        if solicitante is None or solicitante.es_superadmin:
+            return
+        permitidos = {Usuario.Rol.BECARIO, Usuario.Rol.USUARIO}
+        if self.instance.pk:
+            permitidos.add(self.instance.rol)
+        self.fields["rol"].choices = [
+            (valor, etiqueta)
+            for valor, etiqueta in Usuario.Rol.choices
+            if valor in permitidos
+        ]
+        self.fields["sucursal"].queryset = Sucursal.objects.filter(pk=solicitante.sucursal_id)
+        self.fields["sucursal"].initial = solicitante.sucursal_id
+        self.fields["sucursal"].empty_label = None
+        self.fields["sucursal"].required = True
 
     def clean_correo(self):
         correo = (self.cleaned_data.get("correo") or "").strip()
@@ -61,14 +85,18 @@ class _UsuarioBaseForm(BootstrapFormMixin, forms.ModelForm):
                     validate_password(p1, self.instance)
                 except ValidationError as error:
                     self.add_error("password1", error)
+        rol = datos.get("rol")
+        es_superior = rol == Usuario.Rol.SUPERADMIN or self.instance.is_superuser
+        if not es_superior and not datos.get("sucursal"):
+            self.add_error("sucursal", "Selecciona la sucursal del usuario.")
         return datos
 
 
 class UsuarioCrearForm(_UsuarioBaseForm):
     class Meta:
         model = Usuario
-        fields = ["nombre", "correo", "rol", "area", "puesto"]
-        labels = {"area": "Área"}
+        fields = ["nombre", "correo", "rol", "sucursal", "area", "puesto"]
+        labels = {"area": "Área", "sucursal": "Sucursal"}
         help_texts = {
             "correo": "Con este correo inicia sesión y aquí recibe los avisos de los tickets.",
         }
@@ -84,8 +112,8 @@ class UsuarioCrearForm(_UsuarioBaseForm):
 class UsuarioEditarForm(_UsuarioBaseForm):
     class Meta:
         model = Usuario
-        fields = ["nombre", "correo", "rol", "area", "puesto", "activo"]
-        labels = {"area": "Área"}
+        fields = ["nombre", "correo", "rol", "sucursal", "area", "puesto", "activo"]
+        labels = {"area": "Área", "sucursal": "Sucursal"}
         help_texts = {
             "correo": "Con este correo inicia sesión y aquí recibe los avisos de los tickets.",
         }
@@ -140,3 +168,10 @@ class FotoPerfilForm(BootstrapFormMixin, forms.Form):
         except Exception:
             raise ValidationError("No se pudo procesar la imagen.")
         return salida.getvalue()
+
+class CambiarPasswordForm(BootstrapFormMixin, SetPasswordForm):
+    def clean_new_password1(self):
+        nueva = self.cleaned_data.get("new_password1")
+        if nueva and self.user.check_password(nueva):
+            raise ValidationError("La nueva contraseña debe ser diferente a la actual.")
+        return nueva

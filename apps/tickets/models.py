@@ -25,6 +25,22 @@ class Ticket(models.Model):
         related_name="tickets",
     )
 
+    sucursal = models.ForeignKey(
+        "catalog.Sucursal",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="tickets",
+    )
+
+    asignado_a = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tickets_asignados",
+    )
+
     categoria = models.ForeignKey(
         "catalog.Categoria",
         on_delete=models.SET_NULL,
@@ -93,6 +109,7 @@ class Historial(models.Model):
         CREACION = "CREACION", "Creación"
         CAMBIO_ESTADO = "CAMBIO_ESTADO", "Cambio de estado"
         CATEGORIA = "CATEGORIA", "Cambio de categoría"
+        ASIGNACION = "ASIGNACION", "Asignación"
 
     ticket = models.ForeignKey(
         Ticket,
@@ -134,6 +151,7 @@ class Notificacion(models.Model):
         POR_CONFIRMAR = "POR_CONFIRMAR", "Cierre por confirmar"
         TICKET_CERRADO = "TICKET_CERRADO", "Ticket cerrado"
         CIERRE_RECHAZADO = "CIERRE_RECHAZADO", "Cierre rechazado"
+        TICKET_ASIGNADO = "TICKET_ASIGNADO", "Ticket asignado"
 
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,

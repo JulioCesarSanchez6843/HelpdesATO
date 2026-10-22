@@ -150,6 +150,17 @@
     </div>
 </div>
 
+    {% if user.es_superadmin %}
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="mb-3">Detalle por sucursal</h5>
+                {% include "dashboard/_tabla_resumen.html" with filas=por_sucursal titulo="Sucursal" %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
 <div class="row g-3 mt-0">
     <div class="col-lg-6">
         <div class="card shadow-sm h-100">

@@ -197,6 +197,17 @@
 
     </div>
 
+    {% if user.es_superadmin %}
+    <div class="col-md-2">
+        <select name="sucursal" class="form-select" onchange="this.form.submit()">
+            <option value="">Todas las sucursales</option>
+            {% for s in sucursales %}
+            <option value="{{ s.pk }}" {% if sucursal_sel == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.nombre }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+
     <div class="col-md-2">
 
         <select
@@ -281,6 +292,7 @@
                 <th>ID</th>
                 <th>Título</th>
                 <th>Usuario</th>
+                <th>Sucursal</th>
                 <th>Área</th>
                 <th>Categoría</th>
                 <th>Estado</th>
@@ -299,6 +311,10 @@
                     style="cursor: pointer;"
                 >
 
+                    <td>
+                        {{ ticket.sucursal|default:"—" }}
+                    </td>
+                    
                     <td>
                         <code>#{{ ticket.pk }}</code>
                     </td>

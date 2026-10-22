@@ -1,3 +1,5 @@
+from urllib import request
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -11,7 +13,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth import login
 
 from apps.accounts.decorators import admin_required
-from apps.catalog.models import Area, Categoria
+from apps.catalog.models import Area, Categoria, Sucursal
 
 from . import acceso, services
 from .forms import TicketForm, TicketGestionForm
@@ -23,12 +25,14 @@ ESTADOS_VALIDOS = {valor for valor, _ in Ticket.Estado.choices}
 
 TICKETS_POR_PAGINA = 15
 
-
 def _tickets_visibles(usuario):
-    tickets = Ticket.objects.select_related("area", "categoria", "creado_por")
+    tickets = Ticket.objects.select_related("area", "categoria", "creado_por", "sucursal")
 
-    if usuario.es_admin:
+    if usuario.es_superadmin:
         return tickets
+
+    if usuario.es_encargado:
+        return tickets.filter(sucursal_id=usuario.sucursal_id)
 
     return tickets.filter(creado_por=usuario)
 
@@ -53,6 +57,7 @@ def lista_tickets(request):
     estado = request.GET.get("estado", "")
     area = request.GET.get("area", "")
     categoria = request.GET.get("categoria", "")
+    sucursal = request.GET.get("sucursal", "")
 
     tickets = base
 
@@ -79,6 +84,11 @@ def lista_tickets(request):
     else:
         categoria = ""
 
+    if request.user.es_superadmin and sucursal.isdigit():
+        tickets = tickets.filter(sucursal_id=int(sucursal))
+    else:
+        sucursal = ""
+
     pagina = Paginator(tickets, TICKETS_POR_PAGINA).get_page(request.GET.get("page"))
 
     parametros = request.GET.copy()
@@ -91,6 +101,7 @@ def lista_tickets(request):
         "estado_sel": estado,
         "area_sel": area,
         "categoria_sel": categoria,
+        "sucursal_sel": sucursal,
         "estados": Ticket.Estado.choices,
         "querystring": parametros.urlencode(),
     }
@@ -98,6 +109,7 @@ def lista_tickets(request):
     if es_admin:
         contexto["areas"] = Area.objects.all()
         contexto["categorias"] = Categoria.objects.all()
+        contexto["sucursales"] = Sucursal.objects.all()
         plantilla = "tickets/panel_admin.html"
     else:
         plantilla = "tickets/mis_tickets.html"
@@ -167,6 +179,7 @@ def nuevo_ticket(request):
                     ticket = form.save(commit=False)
                     ticket.creado_por = request.user
                     ticket.area = request.user.area
+                    ticket.sucursal = request.user.sucursal
                     ticket.save()
 
                     services.guardar_adjuntos(
@@ -330,6 +343,7 @@ def marcar_en_proceso(request, token):
 @admin_required
 @require_POST
 def forzar_cierre(request, pk):
+    get_object_or_404(_tickets_visibles(request.user), pk=pk)
     with transaction.atomic():
         ticket = get_object_or_404(Ticket.objects.select_for_update(), pk=pk)
 

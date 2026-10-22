@@ -2,7 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from apps.accounts.forms import BootstrapFormMixin
-from .models import Area, Categoria, Puesto
+from .models import Area, Categoria, Puesto, Sucursal
 
 
 class _CatalogoForm(BootstrapFormMixin, forms.ModelForm):
@@ -31,4 +31,9 @@ class CategoriaForm(_CatalogoForm):
 class PuestoForm(_CatalogoForm):
     class Meta:
         model = Puesto
+        fields = ["nombre"]
+
+class SucursalForm(_CatalogoForm):
+    class Meta:
+        model = Sucursal
         fields = ["nombre"]

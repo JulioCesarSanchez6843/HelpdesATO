@@ -16,3 +16,15 @@ def admin_required(view_func):
         return view_func(request, *args, **kwargs)
 
     return _wrapped
+
+def superadmin_required(view_func):
+
+    @login_required
+    @wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        if not request.user.es_superadmin:
+            messages.error(request, "No tienes permiso para acceder a esa sección.")
+            return redirect("lista_tickets")
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped

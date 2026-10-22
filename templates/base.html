@@ -65,6 +65,9 @@
                 {% if user.es_admin %}
                 <a class="nav-link {% if request.resolver_match.url_name == 'lista_tickets' %}active{% endif %}" href="{% url 'lista_tickets' %}" title="Tickets"><i class="bi bi-ticket-perforated"></i><span class="etiqueta">Tickets</span></a>
                 <a class="nav-link {% if request.resolver_match.url_name == 'lista_usuarios' %}active{% endif %}" href="{% url 'lista_usuarios' %}" title="Usuarios"><i class="bi bi-people"></i><span class="etiqueta">Usuarios</span></a>
+                {% if user.es_superadmin %}
+                <a class="nav-link {% if request.resolver_match.url_name == 'lista_sucursales' %}active{% endif %}" href="{% url 'lista_sucursales' %}" title="Sucursales"><i class="bi bi-building"></i><span class="etiqueta">Sucursales</span></a>
+                {% endif %}
                 <a class="nav-link {% if request.resolver_match.url_name == 'lista_areas' %}active{% endif %}" href="{% url 'lista_areas' %}" title="Áreas"><i class="bi bi-diagram-3"></i><span class="etiqueta">Áreas</span></a>
                 <a class="nav-link {% if request.resolver_match.url_name == 'lista_categorias' %}active{% endif %}" href="{% url 'lista_categorias' %}" title="Categorías"><i class="bi bi-tags"></i><span class="etiqueta">Categorías</span></a>
                 <a class="nav-link {% if request.resolver_match.url_name == 'lista_puestos' %}active{% endif %}" href="{% url 'lista_puestos' %}" title="Puestos"><i class="bi bi-briefcase"></i><span class="etiqueta">Puestos</span></a>

@@ -27,18 +27,20 @@ class UsuarioManager(BaseUserManager):
     def create_superuser(self, correo, nombre, password=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
-        extra_fields.setdefault("rol", "ADMIN")
+        extra_fields.setdefault("rol", "SUPERADMIN")
         return self.create_user(correo, nombre, password, **extra_fields)
 
 
 class Usuario(AbstractBaseUser, PermissionsMixin):
     class Rol(models.TextChoices):
-        ADMIN = "ADMIN", "Administrador"
+        SUPERADMIN = "SUPERADMIN", "Super administrador"
+        ENCARGADO = "ENCARGADO", "Encargado"
+        BECARIO = "BECARIO", "Becario"
         USUARIO = "USUARIO", "Usuario"
 
     nombre = models.CharField(max_length=150)
     correo = models.EmailField(unique=True)
-    rol = models.CharField(max_length=10, choices=Rol.choices, default=Rol.USUARIO)
+    rol = models.CharField(max_length=12, choices=Rol.choices, default=Rol.USUARIO)
     puesto = models.ForeignKey(
         "catalog.Puesto", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="usuarios"
@@ -47,7 +49,12 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         "catalog.Area", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="usuarios"
     )
+    sucursal = models.ForeignKey(
+        "catalog.Sucursal", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="usuarios"
+    )
     activo = models.BooleanField(default=True)
+    debe_cambiar_password = models.BooleanField(default=False)
     creado_en = models.DateTimeField(auto_now_add=True)
 
     is_staff = models.BooleanField(default=False)
@@ -64,10 +71,17 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
                 condition=~models.Q(correo=""),
                 name="usuario_correo_no_vacio",
             ),
-            # Dos correos que solo difieren en mayúsculas cuentan como el mismo.
             models.UniqueConstraint(
                 Lower("correo"),
                 name="usuario_correo_unico_sin_mayusculas",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(rol="SUPERADMIN")
+                    | models.Q(is_superuser=True)
+                    | models.Q(sucursal__isnull=False)
+                ),
+                name="usuario_sucursal_obligatoria",
             ),
         ]
 
@@ -79,8 +93,24 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         return self.activo
 
     @property
+    def es_superadmin(self):
+        return self.is_superuser or self.rol == self.Rol.SUPERADMIN
+
+    @property
+    def es_encargado(self):
+        return self.rol == self.Rol.ENCARGADO
+
+    @property
+    def es_becario(self):
+        return self.rol == self.Rol.BECARIO
+
+    @property
     def es_admin(self):
-        return self.rol == self.Rol.ADMIN or self.is_superuser
+        return self.es_superadmin or self.es_encargado
+
+    @property
+    def es_personal(self):
+        return self.es_admin or self.es_becario
 
 
 class SolicitudCambioPassword(models.Model):

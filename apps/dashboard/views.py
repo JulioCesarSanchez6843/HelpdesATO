@@ -35,6 +35,11 @@ def _fecha_get(request, nombre):
     except ValueError:
         return None
 
+def _tickets_alcance(request):
+    tickets = Ticket.objects.all()
+    if request.user.es_superadmin:
+        return tickets
+    return tickets.filter(sucursal_id=request.user.sucursal_id)
 
 def _resumen_por(tickets, campo, sin_valor):
     """Agrupa los tickets por `campo` (ej. 'area__nombre') y calcula, por grupo:
@@ -75,7 +80,8 @@ def reportes(request):
     desde = _fecha_get(request, "desde")
     hasta = _fecha_get(request, "hasta")
 
-    tickets = Ticket.objects.all()
+    base = _tickets_alcance(request)
+    tickets = base
     if desde:
         tickets = tickets.filter(creado_en__date__gte=desde)
     if hasta:
@@ -97,7 +103,7 @@ def reportes(request):
     hoy = timezone.localdate()
     dias = [hoy - timedelta(days=i) for i in range(6, -1, -1)]
     por_dia = dict(
-        Ticket.objects.filter(creado_en__date__gte=dias[0])
+        base.filter(creado_en__date__gte=dias[0])
         .annotate(dia=TruncDate("creado_en"))
         .order_by()
         .values_list("dia")
@@ -114,7 +120,7 @@ def reportes(request):
 
     def _por_mes(campo):
         datos = (
-            Ticket.objects.filter(**{f"{campo}__date__gte": meses[0]})
+            base.filter(**{f"{campo}__date__gte": meses[0]})
             .annotate(mes=TruncMonth(campo))
             .order_by()
             .values_list("mes")
@@ -127,6 +133,7 @@ def reportes(request):
 
     por_categoria = _resumen_por(tickets, "categoria__nombre", "Sin categoría")
     por_area = _resumen_por(tickets, "area__nombre", "Sin área")
+    por_sucursal = _resumen_por(tickets, "sucursal__nombre", "Sin sucursal")
 
     top_solicitantes = list(
         tickets.order_by()
@@ -164,6 +171,7 @@ def reportes(request):
         "graficas": graficas,
         "por_categoria": por_categoria,
         "por_area": por_area,
+        "por_sucursal": por_sucursal,
         "top_solicitantes": top_solicitantes,
         "desde": desde.isoformat() if desde else "",
         "hasta": hasta.isoformat() if hasta else "",
@@ -224,7 +232,7 @@ def exportar_resueltos(request):
     cierres = _ultima_accion("a «Cerrado»")
 
     tickets = (
-        Ticket.objects.filter(estado=Ticket.Estado.CERRADO)
+        _tickets_alcance(request).filter(estado=Ticket.Estado.CERRADO)
         .select_related("area", "categoria", "creado_por", "creado_por__area", "creado_por__puesto")
         .annotate(
             resuelto_por=Subquery(resueltos_por.values("usuario__nombre")[:1]),

@@ -3,9 +3,9 @@ from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from apps.accounts.decorators import admin_required
-from .forms import AreaForm, CategoriaForm, PuestoForm
-from .models import Area, Categoria, Puesto
+from apps.accounts.decorators import admin_required, superadmin_required
+from .forms import AreaForm, CategoriaForm, PuestoForm, SucursalForm
+from .models import Area, Categoria, Puesto, Sucursal
 
 CATALOGOS = {
     "areas": {
@@ -23,16 +23,32 @@ CATALOGOS = {
         "descripcion": "Gestiona los puestos de los usuarios.",
         "relaciones": ("usuarios",),
     },
+    "sucursales": {
+        "modelo": Sucursal, "form": SucursalForm, "titulo": "Sucursales", "singular": "sucursal",
+        "descripcion": "Gestiona las sucursales de la organización.",
+        "relaciones": ("usuarios", "tickets"),
+        "solo_superadmin": True,
+    },
 }
 
 
 def _errores(form):
     return " ".join(e for lista in form.errors.values() for e in lista)
 
+def _sin_permiso(request, cfg):
+    if cfg.get("solo_superadmin") and not request.user.es_superadmin:
+        messages.error(request, "No tienes permiso para acceder a esa sección.")
+        return redirect("lista_tickets")
+    return None
+
 
 @admin_required
 def lista(request, clave):
     cfg = CATALOGOS[clave]
+
+    denegado = _sin_permiso(request, cfg)
+    if denegado:
+        return denegado
 
     if request.method == "POST":
         form = cfg["form"](request.POST)
@@ -90,3 +106,60 @@ def eliminar(request, clave, pk):
         registro.delete()
         messages.success(request, f"{cfg['singular'].capitalize()} «{registro.nombre}» eliminado.")
     return redirect(f"lista_{clave}")
+
+@superadmin_required
+def lista_sucursales(request):
+    sucursales = Sucursal.objects.annotate(
+        n_usuarios=Count("usuarios", distinct=True),
+        n_tickets=Count("tickets", distinct=True),
+    )
+    return render(request, "catalog/sucursales.html", {"sucursales": sucursales})
+
+
+@superadmin_required
+def nueva_sucursal(request):
+    if request.method == "POST":
+        form = SucursalForm(request.POST)
+        if form.is_valid():
+            sucursal = form.save()
+            messages.success(request, f"Sucursal «{sucursal.nombre}» creada.")
+            return redirect("lista_sucursales")
+    else:
+        form = SucursalForm()
+    return render(request, "catalog/sucursal_form.html", {
+        "form": form,
+        "titulo": "Nueva sucursal",
+    })
+
+
+@superadmin_required
+def editar_sucursal(request, pk):
+    sucursal = get_object_or_404(Sucursal, pk=pk)
+    if request.method == "POST":
+        form = SucursalForm(request.POST, instance=sucursal)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Sucursal «{sucursal.nombre}» actualizada.")
+            return redirect("lista_sucursales")
+    else:
+        form = SucursalForm(instance=sucursal)
+    return render(request, "catalog/sucursal_form.html", {
+        "form": form,
+        "titulo": f"Editar sucursal — {sucursal.nombre}",
+    })
+
+
+@superadmin_required
+@require_POST
+def eliminar_sucursal(request, pk):
+    sucursal = get_object_or_404(Sucursal, pk=pk)
+    en_uso = sucursal.usuarios.count() + sucursal.tickets.count()
+    if en_uso:
+        messages.error(
+            request,
+            f"No se puede eliminar «{sucursal.nombre}»: está en uso por {en_uso} registro(s).",
+        )
+    else:
+        sucursal.delete()
+        messages.success(request, f"Sucursal «{sucursal.nombre}» eliminada.")
+    return redirect("lista_sucursales")

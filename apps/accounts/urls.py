@@ -7,6 +7,7 @@ urlpatterns = [
     path("", RedirectView.as_view(pattern_name="lista_tickets", permanent=False)),
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),
+    path("cambiar-password/", views.cambiar_password, name="cambiar_password"),
     path("usuarios/", views.lista_usuarios, name="lista_usuarios"),
     path("usuarios/nuevo/", views.nuevo_usuario, name="nuevo_usuario"),
     path("usuarios/<int:pk>/editar/", views.editar_usuario, name="editar_usuario"),

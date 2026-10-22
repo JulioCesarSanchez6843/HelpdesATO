@@ -13,10 +13,12 @@ _SAL_TOKEN = "tickets.confirmar-cierre"
 _SAL_PROCESO = "tickets.marcar-en-proceso"
 
 
-def _admins_activos():
+def _admins_activos(ticket):
     return list(
         Usuario.objects.filter(
-            Q(rol=Usuario.Rol.ADMIN) | Q(is_superuser=True),
+            Q(rol=Usuario.Rol.SUPERADMIN)
+            | Q(is_superuser=True)
+            | Q(rol=Usuario.Rol.ENCARGADO, sucursal_id=ticket.sucursal_id),
             activo=True,
         ).distinct()
     )
@@ -100,6 +102,8 @@ def ticket_y_admin_desde_token(token):
     admin = Usuario.objects.filter(pk=datos.get("a"), activo=True).first()
     if ticket is None or admin is None or not admin.es_admin:
         return None, None
+    if not admin.es_superadmin and admin.sucursal_id != ticket.sucursal_id:
+        return None, None
     return ticket, admin
 
 
@@ -131,7 +135,7 @@ def registrar_creacion(ticket, autor):
         contenido="Ticket creado.",
     )
 
-    admins = _admins_activos()
+    admins = _admins_activos(ticket)
 
     _notificar(
         admins,
@@ -247,7 +251,7 @@ def confirmar_cierre(ticket, actor):
         ),
     )
 
-    admins = _admins_activos()
+    admins = _admins_activos(ticket)
     _notificar(
         admins,
         Notificacion.Tipo.TICKET_CERRADO,
@@ -292,7 +296,7 @@ def rechazar_cierre(ticket, actor, motivo=""):
         contenido=texto,
     )
 
-    admins = _admins_activos()
+    admins = _admins_activos(ticket)
     _notificar(
         admins,
         Notificacion.Tipo.CIERRE_RECHAZADO,
