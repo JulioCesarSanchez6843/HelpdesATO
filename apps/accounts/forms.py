@@ -6,9 +6,10 @@ from django.contrib.auth.forms import SetPasswordForm
 from django.core.exceptions import ValidationError
 from PIL import Image, ImageOps
 
-from apps.catalog.models import Sucursal
+from apps.catalog.models import Area, Puesto, Sucursal
 
 from .models import Usuario
+from .permisos import puede_cambiar_password, roles_asignables
 
 class BootstrapFormMixin:
     def __init__(self, *args, **kwargs):
@@ -48,9 +49,9 @@ class _UsuarioBaseForm(BootstrapFormMixin, forms.ModelForm):
 
     def _limitar_al_solicitante(self):
         solicitante = self.solicitante
-        if solicitante is None or solicitante.es_superadmin:
+        if solicitante is None:
             return
-        permitidos = {Usuario.Rol.BECARIO, Usuario.Rol.USUARIO}
+        permitidos = set(roles_asignables(solicitante))
         if self.instance.pk:
             permitidos.add(self.instance.rol)
         self.fields["rol"].choices = [
@@ -58,6 +59,10 @@ class _UsuarioBaseForm(BootstrapFormMixin, forms.ModelForm):
             for valor, etiqueta in Usuario.Rol.choices
             if valor in permitidos
         ]
+        self.fields["area"].queryset = Area.objects.visibles_para(solicitante)
+        self.fields["puesto"].queryset = Puesto.objects.visibles_para(solicitante)
+        if solicitante.es_superadmin:
+            return
         self.fields["sucursal"].queryset = Sucursal.objects.filter(pk=solicitante.sucursal_id)
         self.fields["sucursal"].initial = solicitante.sucursal_id
         self.fields["sucursal"].empty_label = None
@@ -89,6 +94,16 @@ class _UsuarioBaseForm(BootstrapFormMixin, forms.ModelForm):
         es_superior = rol == Usuario.Rol.SUPERADMIN or self.instance.is_superuser
         if not es_superior and not datos.get("sucursal"):
             self.add_error("sucursal", "Selecciona la sucursal del usuario.")
+        sucursal = datos.get("sucursal")
+        for campo in ("area", "puesto"):
+            registro = datos.get(campo)
+            if (
+                registro
+                and registro.sucursal_id
+                and sucursal
+                and registro.sucursal_id != sucursal.pk
+            ):
+                self.add_error(campo, "Ese registro pertenece a otra sucursal.")
         return datos
 
 
@@ -128,8 +143,7 @@ class UsuarioEditarForm(_UsuarioBaseForm):
             self.fields["activo"].disabled = True
             del self.fields["password1"]
             del self.fields["password2"]
-        elif self.instance.es_admin:
-            self.fields["rol"].disabled = True
+        elif not puede_cambiar_password(self.solicitante, self.instance):
             del self.fields["password1"]
             del self.fields["password2"]
         else:

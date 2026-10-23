@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.tickets",
     "apps.dashboard",
+    "apps.actividad",
 ]
 
 MIDDLEWARE = [

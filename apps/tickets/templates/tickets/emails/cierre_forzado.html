@@ -11,6 +11,11 @@
 <div style="background:#e8f5ee;border-left:4px solid #198754;padding:12px 16px;margin:0 0 16px;">{{ ticket.nota_resolucion|linebreaksbr }}</div>
 {% endif %}
 
+{% if ticket.justificacion_cierre %}
+<p style="margin:16px 0 4px;font-weight:bold;">Motivo del cierre</p>
+<div style="background:#fff8e1;border-left:4px solid #ffc107;padding:12px 16px;margin:0 0 16px;">{{ ticket.justificacion_cierre|linebreaksbr }}</div>
+{% endif %}
+
 <p style="margin:0 0 16px;">Si el problema sigue, crea un ticket nuevo desde el sistema.</p>
 
 <p style="margin:0;">

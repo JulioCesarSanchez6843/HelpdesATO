@@ -15,6 +15,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 from apps.accounts.decorators import admin_required
+from apps.accounts.models import Usuario
 from apps.tickets.models import Historial, Ticket
 
 DURACION_CIERRE = ExpressionWrapper(
@@ -134,6 +135,21 @@ def reportes(request):
     por_categoria = _resumen_por(tickets, "categoria__nombre", "Sin categoría")
     por_area = _resumen_por(tickets, "area__nombre", "Sin área")
     por_sucursal = _resumen_por(tickets, "sucursal__nombre", "Sin sucursal")
+    resueltos_por_persona = list(
+        tickets.filter(
+            resuelto_por__isnull=False,
+            estado__in=[Ticket.Estado.POR_CONFIRMAR, Ticket.Estado.CERRADO],
+        )
+        .order_by()
+        .values("resuelto_por__nombre", "resuelto_por__rol")
+        .annotate(
+            resueltos=Count("id"),
+            cerrados=Count("id", filter=Q(estado=Ticket.Estado.CERRADO)),
+        )
+        .order_by("-resueltos", "resuelto_por__nombre")
+    )
+    for fila in resueltos_por_persona:
+        fila["rol"] = Usuario.Rol(fila["resuelto_por__rol"]).label
 
     top_solicitantes = list(
         tickets.order_by()
@@ -172,6 +188,7 @@ def reportes(request):
         "por_categoria": por_categoria,
         "por_area": por_area,
         "por_sucursal": por_sucursal,
+        "resueltos_por_persona": resueltos_por_persona,
         "top_solicitantes": top_solicitantes,
         "desde": desde.isoformat() if desde else "",
         "hasta": hasta.isoformat() if hasta else "",

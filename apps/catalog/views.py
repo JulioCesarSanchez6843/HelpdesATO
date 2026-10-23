@@ -23,35 +23,24 @@ CATALOGOS = {
         "descripcion": "Gestiona los puestos de los usuarios.",
         "relaciones": ("usuarios",),
     },
-    "sucursales": {
-        "modelo": Sucursal, "form": SucursalForm, "titulo": "Sucursales", "singular": "sucursal",
-        "descripcion": "Gestiona las sucursales de la organización.",
-        "relaciones": ("usuarios", "tickets"),
-        "solo_superadmin": True,
-    },
 }
 
 
 def _errores(form):
     return " ".join(e for lista in form.errors.values() for e in lista)
 
-def _sin_permiso(request, cfg):
-    if cfg.get("solo_superadmin") and not request.user.es_superadmin:
-        messages.error(request, "No tienes permiso para acceder a esa sección.")
-        return redirect("lista_tickets")
-    return None
+def _puede_modificar(usuario, registro):
+    if usuario.es_superadmin:
+        return True
+    return registro.sucursal_id is not None and registro.sucursal_id == usuario.sucursal_id
 
 
 @admin_required
 def lista(request, clave):
     cfg = CATALOGOS[clave]
 
-    denegado = _sin_permiso(request, cfg)
-    if denegado:
-        return denegado
-
     if request.method == "POST":
-        form = cfg["form"](request.POST)
+        form = cfg["form"](request.POST, solicitante=request.user)
         if form.is_valid():
             registro = form.save()
             messages.success(request, f"{cfg['singular'].capitalize()} «{registro.nombre}» creado.")
@@ -59,18 +48,20 @@ def lista(request, clave):
             messages.error(request, _errores(form))
         return redirect(f"lista_{clave}")
 
-    consulta = cfg["modelo"].objects.all()
+    consulta = cfg["modelo"].objects.visibles_para(request.user)
     for rel in cfg["relaciones"]:
         consulta = consulta.annotate(**{f"n_{rel}": Count(rel, distinct=True)})
     registros = list(consulta)
     for registro in registros:
         registro.en_uso = sum(getattr(registro, f"n_{rel}") for rel in cfg["relaciones"])
+        registro.editable = _puede_modificar(request.user, registro)
 
     return render(request, "catalog/catalogo.html", {
         "registros": registros,
         "titulo": cfg["titulo"],
         "singular": cfg["singular"],
         "descripcion": cfg["descripcion"],
+        "sucursales": Sucursal.objects.all(),
         "url_lista": f"lista_{clave}",
         "url_editar": f"editar_{clave}",
         "url_eliminar": f"eliminar_{clave}",
@@ -81,8 +72,11 @@ def lista(request, clave):
 @require_POST
 def editar(request, clave, pk):
     cfg = CATALOGOS[clave]
-    registro = get_object_or_404(cfg["modelo"], pk=pk)
-    form = cfg["form"](request.POST, instance=registro)
+    registro = get_object_or_404(cfg["modelo"].objects.visibles_para(request.user), pk=pk)
+    if not _puede_modificar(request.user, registro):
+        messages.error(request, "No tienes permiso para modificar ese registro.")
+        return redirect(f"lista_{clave}")
+    form = cfg["form"](request.POST, instance=registro, solicitante=request.user)
     if form.is_valid():
         form.save()
         messages.success(request, f"{cfg['singular'].capitalize()} actualizado.")
@@ -95,7 +89,10 @@ def editar(request, clave, pk):
 @require_POST
 def eliminar(request, clave, pk):
     cfg = CATALOGOS[clave]
-    registro = get_object_or_404(cfg["modelo"], pk=pk)
+    registro = get_object_or_404(cfg["modelo"].objects.visibles_para(request.user), pk=pk)
+    if not _puede_modificar(request.user, registro):
+        messages.error(request, "No tienes permiso para eliminar ese registro.")
+        return redirect(f"lista_{clave}")
     en_uso = sum(getattr(registro, rel).count() for rel in cfg["relaciones"])
     if en_uso:
         messages.error(
@@ -153,7 +150,13 @@ def editar_sucursal(request, pk):
 @require_POST
 def eliminar_sucursal(request, pk):
     sucursal = get_object_or_404(Sucursal, pk=pk)
-    en_uso = sucursal.usuarios.count() + sucursal.tickets.count()
+    en_uso = (
+        sucursal.usuarios.count()
+        + sucursal.tickets.count()
+        + sucursal.area_set.count()
+        + sucursal.categoria_set.count()
+        + sucursal.puesto_set.count()
+    )
     if en_uso:
         messages.error(
             request,

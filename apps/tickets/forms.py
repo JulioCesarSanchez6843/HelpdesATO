@@ -3,6 +3,8 @@ from django.conf import settings
 from django.utils import timezone
 
 from apps.accounts.forms import BootstrapFormMixin
+from apps.accounts.models import Usuario
+from apps.catalog.models import Categoria
 from .models import Ticket
 
 
@@ -121,6 +123,12 @@ class TicketGestionForm(BootstrapFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["categoria"].required = False
+        sucursal_id = self.instance.sucursal_id
+        self.fields["categoria"].queryset = (
+            Categoria.objects.de_sucursal(sucursal_id)
+            if sucursal_id
+            else Categoria.objects.all()
+        )
         self.estado_original = self.instance.estado
 
         permitidos = {
@@ -169,7 +177,29 @@ class TicketGestionForm(BootstrapFormMixin, forms.ModelForm):
             ticket.resuelto_en = None
             ticket.cerrado_en = None
 
+        if ticket.estado != Ticket.Estado.CERRADO:
+            ticket.justificacion_cierre = ""
+
         if commit:
             ticket.save()
 
         return ticket
+
+class AsignarTicketForm(BootstrapFormMixin, forms.Form):
+    asignado_a = forms.ModelChoiceField(
+        label="Asignar a",
+        queryset=Usuario.objects.none(),
+        required=False,
+        empty_label="Sin asignar",
+    )
+
+    def __init__(self, *args, ticket, **kwargs):
+        super().__init__(*args, **kwargs)
+        campo = self.fields["asignado_a"]
+        campo.queryset = Usuario.objects.filter(
+            rol__in=[Usuario.Rol.ENCARGADO, Usuario.Rol.BECARIO],
+            sucursal_id=ticket.sucursal_id,
+            activo=True,
+        )
+        campo.initial = ticket.asignado_a_id
+        campo.label_from_instance = lambda u: f"{u.nombre} ({u.get_rol_display()})"

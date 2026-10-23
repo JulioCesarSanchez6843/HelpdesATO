@@ -37,9 +37,16 @@
                     <li><strong>Área:</strong> {{ ticket.area|default:"—" }}</li>
 
                     <li>
-                        <strong>Categoría:</strong>
-                        {{ ticket.categoria|default:"Sin categoría" }}
+                        <strong>Asignado a:</strong>
+                        {{ ticket.asignado_a|default:"Sin asignar" }}
                     </li>
+
+                    {% if ticket.resuelto_por %}
+                        <li>
+                            <strong>Resuelto por:</strong>
+                            {{ ticket.resuelto_por }}
+                        </li>
+                    {% endif %}
 
                     {% if ticket.numero_serie %}
                         <li>
@@ -235,6 +242,34 @@
 
         <div class="col-md-5">
 
+            {% if puede_tomar %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <form method="post" action="{% url 'tomar_ticket' ticket.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success w-100">
+                            Tomar este ticket
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if form_asignar %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Asignar ticket</h5>
+                    <form method="post" action="{% url 'asignar_ticket' ticket.pk %}">
+                        {% csrf_token %}
+                        {% include "_form_fields.html" with form=form_asignar %}
+                        <button type="submit" class="btn btn-outline-primary w-100">
+                            Guardar asignación
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
             <div class="card">
 
                 <div class="card-body">
@@ -258,11 +293,11 @@
 
                     </form>
 
-                    {% if ticket.estado == "POR_CONFIRMAR" %}
+                    {% if user.es_admin and ticket.estado == "POR_CONFIRMAR" %}
                         <hr>
                         <p class="small text-muted mb-2">
-                            ¿El usuario no responde? Puedes cerrarlo tú; quedará
-                            registrado en el historial.
+                            ¿El usuario no responde? Puedes forzar el cierre, pero debes
+                            justificarlo; quedará registrado en el historial.
                         </p>
                         <form
                             method="post"
@@ -270,8 +305,10 @@
                             onsubmit="return confirm('¿Cerrar el ticket sin la confirmación del usuario?');"
                         >
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-outline-secondary btn-sm w-100">
-                                Cerrar sin confirmación del usuario
+                            <label for="justificacion" class="form-label small">Justificación del cierre *</label>
+                            <textarea name="justificacion" id="justificacion" class="form-control form-control-sm mb-2" rows="3" minlength="10" maxlength="1000" required></textarea>
+                            <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                                Forzar cierre
                             </button>
                         </form>
                     {% endif %}

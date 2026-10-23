@@ -1,38 +1,55 @@
 from django.db import models
+from django.db.models import Q
+from django.db.models.functions import Lower
 
 
-class Area(models.Model):
-    """Sistemas, Contabilidad, RH, Ventas, Dirección..."""
-    nombre = models.CharField(max_length=100, unique=True)
+class CatalogoQuerySet(models.QuerySet):
+    def visibles_para(self, usuario):
+        if usuario.es_superadmin:
+            return self.all()
+        return self.de_sucursal(usuario.sucursal_id)
+
+    def de_sucursal(self, sucursal_id):
+        return self.filter(Q(sucursal__isnull=True) | Q(sucursal_id=sucursal_id))
+
+
+class CatalogoBase(models.Model):
+    nombre = models.CharField(max_length=100)
+    sucursal = models.ForeignKey(
+        "catalog.Sucursal",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
+
+    objects = CatalogoQuerySet.as_manager()
 
     class Meta:
+        abstract = True
         ordering = ["nombre"]
+        constraints = [
+            models.UniqueConstraint(
+                Lower("nombre"),
+                "sucursal",
+                name="%(app_label)s_%(class)s_nombre_sucursal_unico",
+            ),
+        ]
 
     def __str__(self):
         return self.nombre
 
 
-class Categoria(models.Model):
-    """Red, Hardware, Software, Impresoras..."""
-    nombre = models.CharField(max_length=100, unique=True)
+class Area(CatalogoBase):
+    pass
 
-    class Meta:
+
+class Categoria(CatalogoBase):
+    class Meta(CatalogoBase.Meta):
         verbose_name_plural = "Categorías"
-        ordering = ["nombre"]
-
-    def __str__(self):
-        return self.nombre
 
 
-class Puesto(models.Model):
-    """Jefe, Analista, Auxiliar, Gerente..."""
-    nombre = models.CharField(max_length=100, unique=True)
-
-    class Meta:
-        ordering = ["nombre"]
-
-    def __str__(self):
-        return self.nombre
+class Puesto(CatalogoBase):
+    pass
 
 class Sucursal(models.Model):
     nombre = models.CharField(max_length=100, unique=True)

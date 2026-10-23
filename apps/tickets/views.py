@@ -12,11 +12,11 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.contrib.auth import login
 
-from apps.accounts.decorators import admin_required
+from apps.accounts.decorators import admin_required, personal_required
 from apps.catalog.models import Area, Categoria, Sucursal
 
 from . import acceso, services
-from .forms import TicketForm, TicketGestionForm
+from .forms import AsignarTicketForm, TicketForm, TicketGestionForm
 from .imagenes import ImagenInvalida
 from .models import AdjuntoTicket, Ticket
 
@@ -26,12 +26,14 @@ ESTADOS_VALIDOS = {valor for valor, _ in Ticket.Estado.choices}
 TICKETS_POR_PAGINA = 15
 
 def _tickets_visibles(usuario):
-    tickets = Ticket.objects.select_related("area", "categoria", "creado_por", "sucursal")
+    tickets = Ticket.objects.select_related(
+        "area", "categoria", "creado_por", "sucursal", "asignado_a", "resuelto_por"
+    )
 
     if usuario.es_superadmin:
         return tickets
 
-    if usuario.es_encargado:
+    if usuario.es_encargado or usuario.es_becario:
         return tickets.filter(sucursal_id=usuario.sucursal_id)
 
     return tickets.filter(creado_por=usuario)
@@ -39,7 +41,7 @@ def _tickets_visibles(usuario):
 
 @login_required
 def lista_tickets(request):
-    es_admin = request.user.es_admin
+    es_personal = request.user.es_personal
     base = _tickets_visibles(request.user)
 
     conteos = base.aggregate(
@@ -64,7 +66,7 @@ def lista_tickets(request):
     if q:
         filtro = Q(titulo__icontains=q)
 
-        if es_admin:
+        if es_personal:
             filtro |= Q(creado_por__nombre__icontains=q)
 
         tickets = tickets.filter(filtro)
@@ -74,12 +76,12 @@ def lista_tickets(request):
     else:
         estado = ""
 
-    if es_admin and area.isdigit():
+    if es_personal and area.isdigit():
         tickets = tickets.filter(area_id=int(area))
     else:
         area = ""
 
-    if es_admin and categoria.isdigit():
+    if es_personal and categoria.isdigit():
         tickets = tickets.filter(categoria_id=int(categoria))
     else:
         categoria = ""
@@ -106,9 +108,9 @@ def lista_tickets(request):
         "querystring": parametros.urlencode(),
     }
 
-    if es_admin:
-        contexto["areas"] = Area.objects.all()
-        contexto["categorias"] = Categoria.objects.all()
+    if es_personal:
+        contexto["areas"] = Area.objects.visibles_para(request.user)
+        contexto["categorias"] = Categoria.objects.visibles_para(request.user)
         contexto["sucursales"] = Sucursal.objects.all()
         plantilla = "tickets/panel_admin.html"
     else:
@@ -121,12 +123,12 @@ def lista_tickets(request):
 def detalle_ticket(request, pk):
     ticket = get_object_or_404(_tickets_visibles(request.user), pk=pk)
 
-    es_admin = request.user.es_admin
+    es_personal = request.user.es_personal
 
-    form_gestion = TicketGestionForm(instance=ticket) if es_admin else None
+    form_gestion = TicketGestionForm(instance=ticket) if es_personal else None
 
     if request.method == "POST" and "guardar_gestion" in request.POST:
-        if not es_admin:
+        if not es_personal:
             raise PermissionDenied
 
         antes = services.snapshot(ticket)
@@ -163,6 +165,15 @@ def detalle_ticket(request, pk):
             "puede_responder_cierre": (
                 ticket.esperando_confirmacion
                 and ticket.creado_por_id == request.user.pk
+            ),
+            "form_asignar": (
+                AsignarTicketForm(ticket=ticket) if request.user.es_admin else None
+            ),
+            "puede_tomar": (
+                es_personal
+                and ticket.asignado_a_id is None
+                and ticket.estado != Ticket.Estado.CERRADO
+                and request.user.sucursal_id == ticket.sucursal_id
             ),
         },
     )
@@ -344,11 +355,18 @@ def marcar_en_proceso(request, token):
 @require_POST
 def forzar_cierre(request, pk):
     get_object_or_404(_tickets_visibles(request.user), pk=pk)
+    justificacion = request.POST.get("justificacion", "").strip()[:1000]
+    if len(justificacion) < 10:
+        messages.error(
+            request, "Escribe la justificación del cierre (mínimo 10 caracteres)."
+        )
+        return redirect("detalle_ticket", pk=pk)
+
     with transaction.atomic():
         ticket = get_object_or_404(Ticket.objects.select_for_update(), pk=pk)
 
         if ticket.estado == Ticket.Estado.POR_CONFIRMAR:
-            services.forzar_cierre(ticket, request.user)
+            services.forzar_cierre(ticket, request.user, justificacion)
             messages.success(request, "Ticket cerrado sin confirmación del usuario.")
         else:
             messages.error(
@@ -357,6 +375,47 @@ def forzar_cierre(request, pk):
 
     return redirect("detalle_ticket", pk=pk)
 
+@personal_required
+@require_POST
+def tomar_ticket(request, pk):
+    get_object_or_404(_tickets_visibles(request.user), pk=pk)
+
+    with transaction.atomic():
+        ticket = get_object_or_404(Ticket.objects.select_for_update(), pk=pk)
+
+        if request.user.sucursal_id != ticket.sucursal_id:
+            messages.error(request, "Solo puedes tomar tickets de tu sucursal.")
+        elif ticket.estado == Ticket.Estado.CERRADO:
+            messages.error(request, "Ese ticket ya está cerrado.")
+        elif ticket.asignado_a_id is not None:
+            messages.error(request, "Ese ticket ya fue tomado por otra persona.")
+        else:
+            services.tomar_ticket(ticket, request.user)
+            messages.success(request, "Tomaste el ticket.")
+
+    return redirect("detalle_ticket", pk=pk)
+
+
+@admin_required
+@require_POST
+def asignar_ticket(request, pk):
+    ticket = get_object_or_404(_tickets_visibles(request.user), pk=pk)
+    form = AsignarTicketForm(request.POST, ticket=ticket)
+
+    if not form.is_valid():
+        messages.error(
+            request, "Elige a un encargado o becario de la sucursal del ticket."
+        )
+    else:
+        destino = form.cleaned_data["asignado_a"]
+        if destino == ticket.asignado_a:
+            messages.info(request, "El ticket ya tenía esa asignación.")
+        else:
+            with transaction.atomic():
+                services.asignar_ticket(ticket, request.user, destino)
+            messages.success(request, "Asignación actualizada.")
+
+    return redirect("detalle_ticket", pk=pk)
 
 @login_required
 def lista_notificaciones(request):

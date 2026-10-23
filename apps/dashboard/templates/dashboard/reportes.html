@@ -206,6 +206,41 @@
 </div>
 
 {{ graficas|json_script:"datos-graficas" }}
+<div class="row g-3 mt-0">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="mb-3">Tickets resueltos por persona</h5>
+                {% if resueltos_por_persona %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Persona</th>
+                                <th>Rol</th>
+                                <th class="text-end">Resueltos</th>
+                                <th class="text-end">Ya cerrados</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for p in resueltos_por_persona %}
+                            <tr>
+                                <td>{{ p.resuelto_por__nombre }}</td>
+                                <td>{{ p.rol }}</td>
+                                <td class="text-end">{{ p.resueltos }}</td>
+                                <td class="text-end">{{ p.cerrados }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">Sin datos en este rango.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script>
     const datos = JSON.parse(document.getElementById('datos-graficas').textContent);

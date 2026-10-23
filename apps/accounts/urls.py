@@ -13,5 +13,6 @@ urlpatterns = [
     path("usuarios/<int:pk>/editar/", views.editar_usuario, name="editar_usuario"),
     path("usuarios/<int:pk>/estado/", views.cambiar_estado_usuario, name="cambiar_estado_usuario"),
     path("perfil/", views.mi_perfil, name="mi_perfil"),
+    path("perfil/solicitar-password/", views.solicitar_cambio_password, name="solicitar_cambio_password"),
     path("perfil/foto/<int:pk>/", views.foto_usuario, name="foto_usuario"),
 ]

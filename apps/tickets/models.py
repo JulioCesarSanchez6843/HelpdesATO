@@ -41,6 +41,14 @@ class Ticket(models.Model):
         related_name="tickets_asignados",
     )
 
+    resuelto_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tickets_resueltos",
+    )
+
     categoria = models.ForeignKey(
         "catalog.Categoria",
         on_delete=models.SET_NULL,
@@ -56,6 +64,7 @@ class Ticket(models.Model):
     )
 
     nota_resolucion = models.TextField(blank=True)
+    justificacion_cierre = models.TextField(blank=True)
 
     creado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -152,6 +161,7 @@ class Notificacion(models.Model):
         TICKET_CERRADO = "TICKET_CERRADO", "Ticket cerrado"
         CIERRE_RECHAZADO = "CIERRE_RECHAZADO", "Cierre rechazado"
         TICKET_ASIGNADO = "TICKET_ASIGNADO", "Ticket asignado"
+        SOLICITUD_PASSWORD = "SOLICITUD_PASSWORD", "Solicitud de contraseña"
 
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,

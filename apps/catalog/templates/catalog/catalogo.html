@@ -21,6 +21,7 @@
             <thead>
                 <tr>
                     <th>Nombre</th>
+                    <th>Sucursal</th>
                     <th>En uso</th>
                     <th class="text-end">Acciones</th>
                 </tr>
@@ -29,8 +30,10 @@
                 {% for registro in registros %}
                 <tr>
                     <td><span class="text-primary me-2">&#9679;</span>{{ registro.nombre }}</td>
+                    <td>{{ registro.sucursal|default:"General" }}</td>
                     <td class="text-muted">{{ registro.en_uso }}</td>
                     <td class="text-end">
+                        {% if registro.editable %}
                         <button type="button" class="btn btn-sm btn-outline-secondary"
                                 data-bs-toggle="modal" data-bs-target="#modalEditar{{ registro.pk }}">Editar</button>
                         <form method="post" action="{% url url_eliminar registro.pk %}" class="d-inline"
@@ -39,10 +42,13 @@
                             <button class="btn btn-sm btn-outline-danger"
                                     {% if registro.en_uso %}disabled title="Está en uso, no se puede eliminar"{% endif %}>Eliminar</button>
                         </form>
+                        {% else %}
+                        <span class="text-muted small">Solo lectura</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="3" class="text-center text-muted">No hay registros.</td></tr>
+                <tr><td colspan="4" class="text-center text-muted">No hay registros.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -61,6 +67,17 @@
                 <div class="modal-body">
                     <label class="form-label">Nombre *</label>
                     <input type="text" class="form-control" name="nombre" maxlength="100" required>
+                    {% if user.es_superadmin %}
+                    <label class="form-label mt-3">Sucursal</label>
+                    <select class="form-select" name="sucursal_destino">
+                        <option value="">General (todas las sucursales)</option>
+                        {% for s in sucursales %}
+                        <option value="{{ s.pk }}">{{ s.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                    {% else %}
+                    <div class="form-text">Se creará solo para tu sucursal.</div>
+                    {% endif %}
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>

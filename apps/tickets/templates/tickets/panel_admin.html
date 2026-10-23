@@ -295,6 +295,7 @@
                 <th>Sucursal</th>
                 <th>Área</th>
                 <th>Categoría</th>
+                <th>Asignado a</th>
                 <th>Estado</th>
                 <th>Fecha</th>
             </tr>
@@ -312,10 +313,6 @@
                 >
 
                     <td>
-                        {{ ticket.sucursal|default:"—" }}
-                    </td>
-                    
-                    <td>
                         <code>#{{ ticket.pk }}</code>
                     </td>
 
@@ -325,6 +322,10 @@
 
                     <td>
                         {{ ticket.creado_por }}
+                    </td>
+
+                    <td>
+                        {{ ticket.sucursal|default:"—" }}
                     </td>
 
                     <td>
@@ -345,6 +346,14 @@
 
                         {% endif %}
 
+                    </td>
+
+                    <td>
+                        {% if ticket.asignado_a %}
+                            {{ ticket.asignado_a }}
+                        {% else %}
+                            <em class="text-muted">Sin asignar</em>
+                        {% endif %}
                     </td>
 
                     <td>

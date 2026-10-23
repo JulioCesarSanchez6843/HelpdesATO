@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">{% if user.es_admin %}Actividad{% else %}Mi actividad{% endif %}</h3>
+    <a href="{% url 'exportar_actividad' %}{% if querystring %}?{{ querystring }}{% endif %}" class="btn btn-outline-success">
+        <i class="bi bi-file-earmark-excel me-1"></i>Exportar a Excel
+    </a>
+</div>
+
+<form method="get" class="row g-2 mb-4">
+    <div class="col-md-2">
+        <label class="form-label small mb-1">Desde</label>
+        <input type="date" name="desde" value="{{ filtros.desde }}" class="form-control">
+    </div>
+    <div class="col-md-2">
+        <label class="form-label small mb-1">Hasta</label>
+        <input type="date" name="hasta" value="{{ filtros.hasta }}" class="form-control">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label small mb-1">Acción</label>
+        <select name="tipo" class="form-select">
+            <option value="">Todas</option>
+            {% for valor, etiqueta in tipos %}
+            <option value="{{ valor }}" {% if filtros.tipo == valor %}selected{% endif %}>{{ etiqueta }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% if user.es_admin %}
+    <div class="col-md-3">
+        <label class="form-label small mb-1">Persona</label>
+        <select name="persona" class="form-select">
+            <option value="">Todas</option>
+            {% for p in personas %}
+            <option value="{{ p.pk }}" {% if filtros.persona == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.nombre }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+    {% if user.es_superadmin %}
+    <div class="col-md-3">
+        <label class="form-label small mb-1">Sucursal</label>
+        <select name="sucursal" class="form-select">
+            <option value="">Todas</option>
+            {% for s in sucursales %}
+            <option value="{{ s.pk }}" {% if filtros.sucursal == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.nombre }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+    <div class="col-md-2">
+        <label class="form-label small mb-1">Ticket</label>
+        <input type="text" name="ticket" value="{{ filtros.ticket }}" class="form-control" placeholder="Número">
+    </div>
+    <div class="col-md-2 d-flex align-items-end">
+        <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+    </div>
+</form>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md"><div class="card shadow-sm"><div class="card-body py-3"><div class="text-muted small">Acciones</div><div class="fs-4 fw-bold">{{ totales.total }}</div></div></div></div>
+    <div class="col-6 col-md"><div class="card shadow-sm"><div class="card-body py-3"><div class="text-muted small">Tickets creados</div><div class="fs-4 fw-bold">{{ totales.creados }}</div></div></div></div>
+    <div class="col-6 col-md"><div class="card shadow-sm"><div class="card-body py-3"><div class="text-muted small">Tickets resueltos</div><div class="fs-4 fw-bold">{{ totales.resueltos }}</div></div></div></div>
+    <div class="col-6 col-md"><div class="card shadow-sm"><div class="card-body py-3"><div class="text-muted small">Cierres forzados</div><div class="fs-4 fw-bold">{{ totales.forzados }}</div></div></div></div>
+    <div class="col-6 col-md"><div class="card shadow-sm"><div class="card-body py-3"><div class="text-muted small">Contraseñas cambiadas</div><div class="fs-4 fw-bold">{{ totales.passwords }}</div></div></div></div>
+</div>
+
+{% if user.es_admin %}
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="mb-3">Resumen por persona</h5>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Persona</th>
+                        <th class="text-end">Creados</th>
+                        <th class="text-end">Tomados</th>
+                        <th class="text-end">Delegados</th>
+                        <th class="text-end">Resueltos</th>
+                        <th class="text-end">Cierres forzados</th>
+                        <th class="text-end">Contraseñas cambiadas</th>
+                        <th class="text-end">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fila in resumen %}
+                    <tr>
+                        <td>{{ fila.actor__nombre }}</td>
+                        <td class="text-end">{{ fila.creados }}</td>
+                        <td class="text-end">{{ fila.tomados }}</td>
+                        <td class="text-end">{{ fila.delegados }}</td>
+                        <td class="text-end">{{ fila.resueltos }}</td>
+                        <td class="text-end">{{ fila.forzados }}</td>
+                        <td class="text-end">{{ fila.passwords }}</td>
+                        <td class="text-end fw-bold">{{ fila.total }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center text-muted">Sin actividad en este periodo.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h5 class="mb-3">Detalle</h5>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Quién</th>
+                        <th>Acción</th>
+                        <th>A quién</th>
+                        <th>Ticket</th>
+                        <th>Sucursal</th>
+                        <th>Detalle</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in page_obj %}
+                    <tr>
+                        <td class="text-nowrap">{{ e.creado_en|date:"d/m/Y H:i" }}</td>
+                        <td>{{ e.actor_nombre|default:"—" }}</td>
+                        <td><span class="badge bg-secondary">{{ e.get_tipo_display }}</span></td>
+                        <td>{{ e.afectado_nombre|default:"—" }}</td>
+                        <td>
+                            {% if e.ticket_id %}
+                                <a href="{% url 'detalle_ticket' e.ticket_id %}">#{{ e.ticket_numero }}</a>
+                            {% elif e.ticket_numero %}
+                                #{{ e.ticket_numero }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td>{{ e.sucursal|default:"—" }}</td>
+                        <td class="small">{{ e.detalle|truncatechars:160 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted">No hay actividad registrada.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include "tickets/_paginacion.html" %}
+    </div>
+</div>
+{% endblock %}

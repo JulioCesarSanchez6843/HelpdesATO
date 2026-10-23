@@ -6,6 +6,10 @@
 <div class="alert alert-info col-md-6">
     Tu contraseña no se puede cambiar desde aquí.
 </div>
+{% elif sin_permiso_password %}
+<div class="alert alert-info col-md-6">
+    No tienes permiso para cambiar la contraseña de este usuario.
+</div>
 {% endif %}
 
 <form method="post" class="col-md-6">

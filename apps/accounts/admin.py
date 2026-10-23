@@ -35,8 +35,7 @@ class UsuarioAdmin(UserAdmin):
         messages.error(
             request,
             "Las contraseñas no se cambian desde aquí. Usa la sección «Usuarios» "
-            "de la aplicación (a un administrador solo se le cambia con su "
-            "autorización por correo).",
+            "de la aplicación.",
         )
         return redirect("admin:accounts_usuario_change", id)
 

@@ -97,6 +97,10 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         return self.is_superuser or self.rol == self.Rol.SUPERADMIN
 
     @property
+    def es_maestro(self):
+        return self.is_superuser
+
+    @property
     def es_encargado(self):
         return self.rol == self.Rol.ENCARGADO
 

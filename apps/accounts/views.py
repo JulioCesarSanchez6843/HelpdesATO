@@ -8,20 +8,23 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
+from datetime import timedelta
+
+from django.utils import timezone
+
+from apps.actividad.models import Evento
+from apps.actividad.registro import registrar as registrar_evento
+from apps.tickets.models import Notificacion
+
 from .decorators import admin_required
 from .forms import CambiarPasswordForm, FotoPerfilForm, UsuarioCrearForm, UsuarioEditarForm
 from .models import FotoPerfil, Usuario
+from .permisos import (
+    puede_cambiar_password,
+    quienes_pueden_cambiar,
+    usuarios_gestionables as _usuarios_gestionables,
+)
 from apps.catalog.models import Sucursal
-
-
-def _usuarios_gestionables(solicitante):
-    usuarios = Usuario.objects.select_related("area", "puesto", "sucursal")
-    if solicitante.es_superadmin:
-        return usuarios
-    return usuarios.filter(sucursal_id=solicitante.sucursal_id).filter(
-        Q(pk=solicitante.pk)
-        | Q(rol__in=[Usuario.Rol.BECARIO, Usuario.Rol.USUARIO])
-    )
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -80,6 +83,12 @@ def nuevo_usuario(request):
         form = UsuarioCrearForm(request.POST, solicitante=request.user)
         if form.is_valid():
             usuario = form.save()
+            registrar_evento(
+                Evento.Tipo.USUARIO_CREADO,
+                request.user,
+                afectado=usuario,
+                detalle=f"Cuenta creada con rol {usuario.get_rol_display()}.",
+            )
             messages.success(request, f"Usuario «{usuario.nombre}» creado.")
             return redirect("lista_usuarios")
     else:
@@ -91,6 +100,8 @@ def nuevo_usuario(request):
 def editar_usuario(request, pk):
     usuario = get_object_or_404(_usuarios_gestionables(request.user), pk=pk)
     es_el_mismo = usuario.pk == request.user.pk
+    rol_anterior = usuario.rol
+    puede_password = puede_cambiar_password(request.user, usuario)
 
     if request.method == "POST":
         form = UsuarioEditarForm(
@@ -102,10 +113,27 @@ def editar_usuario(request, pk):
             nueva = form.nueva_password
             if nueva:
                 usuario.set_password(nueva)
-                usuario.save(update_fields=["password"])
+                usuario.debe_cambiar_password = True
+                usuario.save(update_fields=["password", "debe_cambiar_password"])
+                registrar_evento(
+                    Evento.Tipo.PASSWORD_CAMBIADO,
+                    request.user,
+                    afectado=usuario,
+                    detalle=f"{request.user.nombre} cambió la contraseña de {usuario.nombre}.",
+                )
                 messages.success(request, f"Usuario «{usuario.nombre}» actualizado. Se cambió su contraseña.")
             else:
                 messages.success(request, f"Usuario «{usuario.nombre}» actualizado.")
+            if usuario.rol != rol_anterior:
+                registrar_evento(
+                    Evento.Tipo.ROL_CAMBIADO,
+                    request.user,
+                    afectado=usuario,
+                    detalle=(
+                        f"Rol cambiado de «{Usuario.Rol(rol_anterior).label}» "
+                        f"a «{usuario.get_rol_display()}»."
+                    ),
+                )
             return redirect("lista_usuarios")
     else:
         form = UsuarioEditarForm(
@@ -114,6 +142,7 @@ def editar_usuario(request, pk):
     return render(request, "accounts/usuario_form.html", {
         "form": form, "titulo": f"Editar usuario — {usuario.nombre}",
         "es_el_mismo": es_el_mismo,
+        "sin_permiso_password": not es_el_mismo and not puede_password,
     })
 
 
@@ -127,6 +156,12 @@ def cambiar_estado_usuario(request, pk):
         usuario.activo = not usuario.activo
         usuario.save(update_fields=["activo"])
         estado = "activado" if usuario.activo else "desactivado"
+        registrar_evento(
+            Evento.Tipo.USUARIO_ESTADO,
+            request.user,
+            afectado=usuario,
+            detalle=f"Cuenta {estado}.",
+        )
         messages.success(request, f"Usuario «{usuario.nombre}» {estado}.")
     return redirect("lista_usuarios")
 
@@ -167,8 +202,47 @@ def cambiar_password(request):
             usuario.debe_cambiar_password = False
             usuario.save(update_fields=["debe_cambiar_password"])
             update_session_auth_hash(request, usuario)
+            registrar_evento(
+                Evento.Tipo.PASSWORD_PROPIO,
+                usuario,
+                afectado=usuario,
+                detalle="Cambió su propia contraseña.",
+            )
             messages.success(request, "Contraseña actualizada.")
             return redirect("lista_tickets")
     else:
         form = CambiarPasswordForm(request.user)
     return render(request, "accounts/cambiar_password.html", {"form": form})
+
+@login_required
+@require_POST
+def solicitar_cambio_password(request):
+    solicitante = request.user
+    reciente = Evento.objects.filter(
+        tipo=Evento.Tipo.PASSWORD_SOLICITADO,
+        actor=solicitante,
+        creado_en__gte=timezone.now() - timedelta(hours=1),
+    ).exists()
+    destinatarios = list(quienes_pueden_cambiar(solicitante))
+
+    if reciente:
+        messages.info(request, "Ya enviaste una solicitud hace poco. Espera a que te atiendan.")
+    elif not destinatarios:
+        messages.error(request, "No hay a quién enviarle la solicitud.")
+    else:
+        registrar_evento(
+            Evento.Tipo.PASSWORD_SOLICITADO,
+            solicitante,
+            afectado=solicitante,
+            detalle="Solicitó que le cambien la contraseña.",
+        )
+        Notificacion.objects.bulk_create([
+            Notificacion(
+                usuario=destino,
+                tipo=Notificacion.Tipo.SOLICITUD_PASSWORD,
+                mensaje=f"{solicitante.nombre} solicitó un cambio de contraseña.",
+            )
+            for destino in destinatarios
+        ])
+        messages.success(request, "Solicitud enviada.")
+    return redirect("mi_perfil")

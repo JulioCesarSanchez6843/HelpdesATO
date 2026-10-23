@@ -41,4 +41,8 @@ urlpatterns = [
     path("<int:pk>/responder-cierre/", views.responder_cierre, name="responder_cierre"),
 
     path("<int:pk>/forzar-cierre/", views.forzar_cierre, name="forzar_cierre"),
+
+    path("<int:pk>/tomar/", views.tomar_ticket, name="tomar_ticket"),
+
+    path("<int:pk>/asignar/", views.asignar_ticket, name="asignar_ticket"),
 ]

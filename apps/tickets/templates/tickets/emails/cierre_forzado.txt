@@ -6,7 +6,10 @@ Ticket #{{ ticket.pk }}: {{ ticket.titulo }}
 
 Nota de resolución:
 {{ ticket.nota_resolucion }}
-
+{% if ticket.justificacion_cierre %}
+Motivo del cierre:
+{{ ticket.justificacion_cierre }}
+{% endif %}
 Si el problema sigue, crea un ticket nuevo desde:
 {{ url_ticket }}
 {% endautoescape %}
