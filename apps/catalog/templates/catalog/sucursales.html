@@ -26,7 +26,15 @@
             <tbody>
                 {% for sucursal in sucursales %}
                 <tr>
-                    <td><i class="bi bi-building text-primary me-2"></i>{{ sucursal.nombre }}</td>
+                    <td>
+                        {% if sucursal.logo_actualizado_en %}
+                        <img src="{% url 'logo_sucursal' sucursal.pk %}?v={{ sucursal.logo_actualizado_en|date:'U' }}" alt="" class="logo-sucursal-mini me-2">
+                        {% else %}
+                        <i class="bi bi-building text-primary me-2"></i>
+                        {% endif %}
+                        {{ sucursal.nombre }}
+                        <span class="muestra-color ms-2" style="background-color: {{ sucursal.color_primario }}" title="{{ sucursal.color_primario }}"></span>
+                    </td>
                     <td class="text-end text-muted">{{ sucursal.n_usuarios }}</td>
                     <td class="text-end text-muted">{{ sucursal.n_tickets }}</td>
                     <td class="text-end">

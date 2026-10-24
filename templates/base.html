@@ -9,6 +9,17 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="{% static 'css/tollocan.css' %}" rel="stylesheet">
+    <style>
+        :root {
+            --tollocan-rojo: {{ tema.primario }};
+            --tollocan-rojo-oscuro: {{ tema.oscuro }};
+            --tollocan-rojo-activo: {{ tema.activo }};
+            --tollocan-gris: {{ tema.fondo }};
+            --tollocan-rgb: {{ tema.rgb }};
+            --tollocan-oscuro-rgb: {{ tema.rgb_oscuro }};
+            --tollocan-texto: {{ tema.texto }};
+        }
+    </style>
     <script>
         try {
             if (localStorage.getItem("menuExpandido") === "1") {
@@ -31,6 +42,16 @@
         </div>
 
         <div class="d-flex align-items-center ms-auto">
+            {% if sucursal_actual %}
+            <div class="chip-sucursal me-4" title="{{ sucursal_actual.nombre }}">
+                {% if sucursal_actual.logo_actualizado_en %}
+                <img src="{% url 'logo_sucursal' sucursal_actual.pk %}?v={{ sucursal_actual.logo_actualizado_en|date:'U' }}" alt="{{ sucursal_actual.nombre }}" class="logo-sucursal-nav">
+                {% else %}
+                <span class="logo-sucursal-vacio"><i class="bi bi-building"></i></span>
+                {% endif %}
+                <span class="d-none d-md-inline">{{ sucursal_actual.nombre }}</span>
+            </div>
+            {% endif %}
             <a class="text-white text-decoration-none me-4" href="{% url 'lista_notificaciones' %}" title="Notificaciones">
                 <i class="bi bi-bell-fill fs-5"></i>{% if notificaciones_sin_leer %}<span class="badge rounded-pill bg-danger ms-1">{{ notificaciones_sin_leer }}</span>{% endif %}
             </a>

@@ -2,8 +2,14 @@
 {% block content %}
 <h3 class="mb-3">{{ titulo }}</h3>
 
-<form method="post" class="col-md-6">
+<form method="post" enctype="multipart/form-data" class="col-md-6">
     {% csrf_token %}
+    {% if form.instance.logo_actualizado_en %}
+    <div class="mb-3">
+        <span class="form-label d-block">Icono actual</span>
+        <img src="{% url 'logo_sucursal' form.instance.pk %}?v={{ form.instance.logo_actualizado_en|date:'U' }}" alt="Icono actual" class="logo-sucursal-preview">
+    </div>
+    {% endif %}
     {% include "_form_fields.html" %}
     <button type="submit" class="btn btn-primary">Guardar</button>
     <a href="{% url 'lista_sucursales' %}" class="btn btn-outline-secondary">Cancelar</a>

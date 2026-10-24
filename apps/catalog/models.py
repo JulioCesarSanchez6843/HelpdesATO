@@ -1,3 +1,4 @@
+from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Lower
@@ -53,6 +54,13 @@ class Puesto(CatalogoBase):
 
 class Sucursal(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
+    color_primario = models.CharField(
+        max_length=7,
+        default="#c8102e",
+        validators=[RegexValidator(r"^#[0-9a-fA-F]{6}$", "Color no válido.")],
+    )
+    logo = models.BinaryField(null=True, blank=True, editable=False)
+    logo_actualizado_en = models.DateTimeField(null=True, blank=True, editable=False)
 
     class Meta:
         verbose_name_plural = "Sucursales"

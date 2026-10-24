@@ -1,5 +1,7 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db.models import Count
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -106,7 +108,7 @@ def eliminar(request, clave, pk):
 
 @superadmin_required
 def lista_sucursales(request):
-    sucursales = Sucursal.objects.annotate(
+    sucursales = Sucursal.objects.defer("logo").annotate(
         n_usuarios=Count("usuarios", distinct=True),
         n_tickets=Count("tickets", distinct=True),
     )
@@ -116,7 +118,7 @@ def lista_sucursales(request):
 @superadmin_required
 def nueva_sucursal(request):
     if request.method == "POST":
-        form = SucursalForm(request.POST)
+        form = SucursalForm(request.POST, request.FILES)
         if form.is_valid():
             sucursal = form.save()
             messages.success(request, f"Sucursal «{sucursal.nombre}» creada.")
@@ -133,7 +135,7 @@ def nueva_sucursal(request):
 def editar_sucursal(request, pk):
     sucursal = get_object_or_404(Sucursal, pk=pk)
     if request.method == "POST":
-        form = SucursalForm(request.POST, instance=sucursal)
+        form = SucursalForm(request.POST, request.FILES, instance=sucursal)
         if form.is_valid():
             form.save()
             messages.success(request, f"Sucursal «{sucursal.nombre}» actualizada.")
@@ -166,3 +168,15 @@ def eliminar_sucursal(request, pk):
         sucursal.delete()
         messages.success(request, f"Sucursal «{sucursal.nombre}» eliminada.")
     return redirect("lista_sucursales")
+
+@login_required
+def logo_sucursal(request, pk):
+    sucursal = get_object_or_404(
+        Sucursal.objects.only("logo", "logo_actualizado_en"),
+        pk=pk,
+        logo_actualizado_en__isnull=False,
+    )
+    respuesta = HttpResponse(bytes(sucursal.logo), content_type="image/png")
+    respuesta["X-Content-Type-Options"] = "nosniff"
+    respuesta["Cache-Control"] = "private, max-age=3600"
+    return respuesta

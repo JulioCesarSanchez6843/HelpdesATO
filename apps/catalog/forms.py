@@ -1,6 +1,10 @@
+from io import BytesIO
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.utils import timezone
+from PIL import Image, ImageOps
 
 from apps.accounts.forms import BootstrapFormMixin
 from .models import Area, Categoria, Puesto, Sucursal
@@ -15,6 +19,7 @@ class _CatalogoForm(BootstrapFormMixin, forms.ModelForm):
         if repetidos.exists():
             raise ValidationError("Ya existe un registro con ese nombre.")
         return nombre
+
 
 class _CatalogoPorSucursalForm(_CatalogoForm):
     sucursal_destino = forms.ModelChoiceField(
@@ -60,24 +65,70 @@ class _CatalogoPorSucursalForm(_CatalogoForm):
             registro.save()
         return registro
 
-class AreaForm(_CatalogoForm):
+
+class AreaForm(_CatalogoPorSucursalForm):
     class Meta:
         model = Area
         fields = ["nombre"]
 
 
-class CategoriaForm(_CatalogoForm):
+class CategoriaForm(_CatalogoPorSucursalForm):
     class Meta:
         model = Categoria
         fields = ["nombre"]
 
 
-class PuestoForm(_CatalogoForm):
+class PuestoForm(_CatalogoPorSucursalForm):
     class Meta:
         model = Puesto
         fields = ["nombre"]
 
+
 class SucursalForm(_CatalogoForm):
+    logo_archivo = forms.ImageField(
+        label="Icono de la sucursal",
+        required=False,
+        help_text="JPG o PNG, máximo 5 MB. Se recomienda una imagen cuadrada con fondo transparente.",
+        widget=forms.FileInput(attrs={"accept": "image/jpeg,image/png"}),
+    )
+    quitar_logo = forms.BooleanField(label="Quitar el icono actual", required=False)
+
     class Meta:
         model = Sucursal
-        fields = ["nombre"]
+        fields = ["nombre", "color_primario"]
+        labels = {"color_primario": "Color principal"}
+        help_texts = {"color_primario": "Toda la interfaz de esta sucursal se adapta a este color."}
+        widgets = {
+            "color_primario": forms.TextInput(
+                attrs={"type": "color", "class": "form-control-color"}
+            ),
+        }
+
+    def clean_logo_archivo(self):
+        archivo = self.cleaned_data.get("logo_archivo")
+        if not archivo:
+            return None
+        if archivo.size > 5 * 1024 * 1024:
+            raise ValidationError("La imagen no puede pesar más de 5 MB.")
+        try:
+            archivo.seek(0)
+            imagen = ImageOps.exif_transpose(Image.open(archivo)).convert("RGBA")
+            imagen.thumbnail((256, 256), Image.LANCZOS)
+            salida = BytesIO()
+            imagen.save(salida, format="PNG", optimize=True)
+        except Exception:
+            raise ValidationError("No se pudo procesar la imagen.")
+        return salida.getvalue()
+
+    def save(self, commit=True):
+        sucursal = super().save(commit=False)
+        logo = self.cleaned_data.get("logo_archivo")
+        if logo:
+            sucursal.logo = logo
+            sucursal.logo_actualizado_en = timezone.now()
+        elif self.cleaned_data.get("quitar_logo"):
+            sucursal.logo = None
+            sucursal.logo_actualizado_en = None
+        if commit:
+            sucursal.save()
+        return sucursal
