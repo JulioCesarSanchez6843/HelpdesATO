@@ -15,7 +15,30 @@
 
     {% csrf_token %}
 
-    {% include "_form_fields.html" with form=form %}
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+
+    <div class="mb-3">
+        <label for="{{ form.titulo.id_for_label }}" class="form-label">{{ form.titulo.label }} *</label>
+        {{ form.titulo }}
+        {% for error in form.titulo.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+    </div>
+
+    <div class="mb-3">
+        <label for="{{ form.descripcion.id_for_label }}" class="form-label">{{ form.descripcion.label }} *</label>
+        {{ form.descripcion }}
+        {% for error in form.descripcion.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+    </div>
+
+    <div class="mb-4">
+        <span class="form-label d-block">{{ form.imagenes.label }}</span>
+        <label for="{{ form.imagenes.id_for_label }}" class="zona-logo" id="zonaImagenes">
+            <i class="bi bi-cloud-arrow-up"></i>
+            <span class="zona-logo-titulo">Haz clic o arrastra tus imágenes aquí</span>
+            <span class="zona-logo-ayuda">{{ form.imagenes.help_text }}</span>
+        </label>
+        {{ form.imagenes }}
+        {% for error in form.imagenes.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+    </div>
 
     <button type="submit" class="btn btn-primary">Crear ticket</button>
 
@@ -82,6 +105,28 @@
             img.style.maxHeight = unica ? "360px" : "150px";
             img.style.objectFit = unica ? "contain" : "cover";
             lista.appendChild(img);
+        });
+    }
+
+        const zona = document.getElementById("zonaImagenes");
+    if (zona) {
+        ["dragenter", "dragover"].forEach(function (evento) {
+            zona.addEventListener(evento, function (e) {
+                e.preventDefault();
+                zona.classList.add("arrastrando");
+            });
+        });
+        ["dragleave", "drop"].forEach(function (evento) {
+            zona.addEventListener(evento, function (e) {
+                e.preventDefault();
+                zona.classList.remove("arrastrando");
+            });
+        });
+        zona.addEventListener("drop", function (e) {
+            if (e.dataTransfer.files.length) {
+                input.files = e.dataTransfer.files;
+                input.dispatchEvent(new Event("change"));
+            }   
         });
     }
 

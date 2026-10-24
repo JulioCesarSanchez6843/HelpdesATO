@@ -9,6 +9,53 @@ from PIL import Image, ImageOps
 from apps.accounts.forms import BootstrapFormMixin
 from .models import Area, Categoria, Puesto, Sucursal
 
+def _quitar_fondo_blanco(imagen):
+    datos = imagen.tobytes()
+    opacos = blancos = 0
+    for i in range(0, len(datos), 4):
+        if datos[i + 3] > 200:
+            opacos += 1
+            if min(datos[i], datos[i + 1], datos[i + 2]) >= 235:
+                blancos += 1
+    if not opacos or blancos / opacos < 0.3:
+        return imagen
+    salida = bytearray(datos)
+    for i in range(0, len(datos), 4):
+        t = min(max((min(datos[i], datos[i + 1], datos[i + 2]) - 190) / 60, 0.0), 1.0)
+        if t == 0.0:
+            continue
+        if t == 1.0:
+            salida[i:i + 4] = b"\xff\xff\xff\x00"
+            continue
+        k = 1.0 - t
+        for c in range(3):
+            salida[i + c] = min(255, max(0, round((datos[i + c] - 255 * t) / k)))
+        salida[i + 3] = round(datos[i + 3] * k)
+    return Image.frombytes("RGBA", imagen.size, bytes(salida))
+
+def _quitar_fondo_blanco(imagen):
+    datos = imagen.tobytes()
+    opacos = blancos = 0
+    for i in range(0, len(datos), 4):
+        if datos[i + 3] > 200:
+            opacos += 1
+            if min(datos[i], datos[i + 1], datos[i + 2]) >= 235:
+                blancos += 1
+    if not opacos or blancos / opacos < 0.3:
+        return imagen
+    salida = bytearray(datos)
+    for i in range(0, len(datos), 4):
+        t = min(max((min(datos[i], datos[i + 1], datos[i + 2]) - 190) / 60, 0.0), 1.0)
+        if t == 0.0:
+            continue
+        if t == 1.0:
+            salida[i:i + 4] = b"\xff\xff\xff\x00"
+            continue
+        k = 1.0 - t
+        for c in range(3):
+            salida[i + c] = min(255, max(0, round((datos[i + c] - 255 * t) / k)))
+        salida[i + 3] = round(datos[i + 3] * k)
+    return Image.frombytes("RGBA", imagen.size, bytes(salida))
 
 class _CatalogoForm(BootstrapFormMixin, forms.ModelForm):
     def clean_nombre(self):
@@ -86,22 +133,27 @@ class PuestoForm(_CatalogoPorSucursalForm):
 
 class SucursalForm(_CatalogoForm):
     logo_archivo = forms.ImageField(
-        label="Icono de la sucursal",
+        label="Logo de la sucursal",
         required=False,
-        help_text="JPG o PNG, máximo 5 MB. Se recomienda una imagen cuadrada con fondo transparente.",
-        widget=forms.FileInput(attrs={"accept": "image/jpeg,image/png"}),
+        widget=forms.FileInput(attrs={"accept": "image/jpeg,image/png", "class": "d-none"}),
     )
-    quitar_logo = forms.BooleanField(label="Quitar el icono actual", required=False)
+    quitar_logo = forms.BooleanField(required=False, widget=forms.HiddenInput())
+    field_order = ["nombre", "color_barra", "color_primario", "logo_archivo", "quitar_logo"]
 
     class Meta:
         model = Sucursal
-        fields = ["nombre", "color_primario"]
-        labels = {"color_primario": "Color principal"}
-        help_texts = {"color_primario": "Toda la interfaz de esta sucursal se adapta a este color."}
+        fields = ["nombre", "color_barra", "color_primario"]
+        labels = {
+            "color_barra": "Color de la barra",
+            "color_primario": "Color de iconos y botones",
+        }
+        help_texts = {
+            "color_barra": "Fondo de la barra superior y del menú lateral.",
+            "color_primario": "Iconos, botones y detalles de la interfaz.",
+        }
         widgets = {
-            "color_primario": forms.TextInput(
-                attrs={"type": "color", "class": "form-control-color"}
-            ),
+            "color_barra": forms.TextInput(attrs={"type": "color", "class": "form-control-color"}),
+            "color_primario": forms.TextInput(attrs={"type": "color", "class": "form-control-color"}),
         }
 
     def clean_logo_archivo(self):
@@ -113,7 +165,9 @@ class SucursalForm(_CatalogoForm):
         try:
             archivo.seek(0)
             imagen = ImageOps.exif_transpose(Image.open(archivo)).convert("RGBA")
-            imagen.thumbnail((256, 256), Image.LANCZOS)
+            imagen.thumbnail((600, 240), Image.LANCZOS)
+            imagen = _quitar_fondo_blanco(imagen)
+            imagen = _quitar_fondo_blanco(imagen)
             salida = BytesIO()
             imagen.save(salida, format="PNG", optimize=True)
         except Exception:

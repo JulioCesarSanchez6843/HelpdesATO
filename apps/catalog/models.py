@@ -59,6 +59,11 @@ class Sucursal(models.Model):
         default="#c8102e",
         validators=[RegexValidator(r"^#[0-9a-fA-F]{6}$", "Color no válido.")],
     )
+    color_barra = models.CharField(
+        max_length=7,
+        default="#2f2f2f",
+        validators=[RegexValidator(r"^#[0-9a-fA-F]{6}$", "Color no válido.")],
+    )
     logo = models.BinaryField(null=True, blank=True, editable=False)
     logo_actualizado_en = models.DateTimeField(null=True, blank=True, editable=False)
 

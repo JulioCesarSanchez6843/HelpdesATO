@@ -1,25 +1,40 @@
 {% extends "base.html" %}
+{% load static %}
 {% block content %}
-<div class="row justify-content-center mt-5">
-  <div class="col-md-4">
-    <h3>Iniciar sesión</h3>
-    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
-    <form method="post">
-      {% csrf_token %}
-      <input type="hidden" name="next" value="{{ next }}">
-      <div class="mb-3">
-        <label class="form-label">Correo electrónico</label>
-        <input type="email" name="correo" class="form-control" required autofocus>
+<div class="row justify-content-center mt-4 mt-md-5">
+  <div class="col-11 col-sm-8 col-md-6 col-lg-4">
+    <div class="card login-tarjeta shadow-sm">
+      <div class="login-cabecera text-center">
+        <img src="{% static 'img/Logo_tollocan.png' %}" alt="Grupo Tollocan" class="login-logo">
       </div>
-      <div class="mb-3">
-        <label class="form-label">Contraseña</label>
-        <input type="password" name="password" class="form-control" required>
+      <div class="card-body p-4">
+        <h4 class="mb-1 text-center">Iniciar sesión</h4>
+        <p class="text-muted text-center small mb-4">Accede al sistema de soporte técnico</p>
+        {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ next }}">
+          <div class="mb-3">
+            <label class="form-label">Correo electrónico</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+              <input type="email" name="correo" class="form-control" required autofocus>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Contraseña</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-lock"></i></span>
+              <input type="password" name="password" class="form-control" required>
+            </div>
+          </div>
+          <button class="btn btn-primary w-100 py-2">Iniciar sesión</button>
+        </form>
+        <p class="text-muted small mt-3 mb-0 text-center">
+          ¿Olvidaste tu contraseña? Pide a un administrador que la cambie.
+        </p>
       </div>
-      <button class="btn btn-primary w-100">Iniciar sesión</button>
-    </form>
-    <p class="text-muted small mt-3">
-      ¿Olvidaste tu contraseña? Pide a un administrador que la cambie.
-    </p>
+    </div>
   </div>
 </div>
 {% endblock %}

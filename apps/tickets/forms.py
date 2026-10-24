@@ -67,6 +67,7 @@ class TicketForm(BootstrapFormMixin, forms.ModelForm):
         widget=MultipleFileInput(
             attrs={
                 "accept": ".jpg,.jpeg,.png,image/jpeg,image/png",
+                "class": "d-none",
                 "data-max-mb": settings.ADJUNTOS_MAX_MB,
                 "data-max-files": settings.ADJUNTOS_MAX_ARCHIVOS,
             }
