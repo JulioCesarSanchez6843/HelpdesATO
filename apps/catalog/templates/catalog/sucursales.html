@@ -18,6 +18,7 @@
             <thead>
                 <tr>
                     <th>Nombre</th>
+                    <th>Código</th>
                     <th class="text-end">Usuarios</th>
                     <th class="text-end">Tickets</th>
                     <th class="text-end">Acciones</th>
@@ -25,7 +26,7 @@
             </thead>
             <tbody>
                 {% for sucursal in sucursales %}
-                <tr>
+                <tr{% if not sucursal.activa %} class="table-secondary"{% endif %}>
                     <td>
                         {% if sucursal.logo_actualizado_en %}
                         <img src="{% url 'logo_sucursal' sucursal.pk %}?v={{ sucursal.logo_actualizado_en|date:'U' }}" alt="" class="logo-sucursal-mini me-2">
@@ -35,21 +36,26 @@
                         {{ sucursal.nombre }}
                         <span class="muestra-color ms-2" style="background-color: {{ sucursal.color_barra }}" title="Barra: {{ sucursal.color_barra }}"></span>
                         <span class="muestra-color ms-1" style="background-color: {{ sucursal.color_primario }}" title="Iconos: {{ sucursal.color_primario }}"></span>
+                        {% if not sucursal.activa %}<span class="badge text-bg-secondary ms-2">Inactiva</span>{% endif %}
                     </td>
+                    <td class="text-muted">{{ sucursal.codigo_distribuidor|default:"—" }}</td>
                     <td class="text-end text-muted">{{ sucursal.n_usuarios }}</td>
                     <td class="text-end text-muted">{{ sucursal.n_tickets }}</td>
                     <td class="text-end">
                         <a href="{% url 'editar_sucursal' sucursal.pk %}" class="btn btn-sm btn-outline-secondary">Editar</a>
-                        <form method="post" action="{% url 'eliminar_sucursal' sucursal.pk %}" class="d-inline"
-                              onsubmit="return confirm('¿Eliminar «{{ sucursal.nombre|escapejs }}»?{% if sucursal.n_usuarios %} Sus usuarios (excepto superadmins) quedarán desactivados.{% endif %}');">
+                        <form method="post" action="{% url 'cambiar_estado_sucursal' sucursal.pk %}" class="d-inline"
+                              onsubmit="return confirm('{% if sucursal.activa %}¿Desactivar «{{ sucursal.nombre|escapejs }}»? Se desactivarán sus usuarios (excepto superadmins). Sus tickets se conservan sin cambios. {% else %}¿Activar «{{ sucursal.nombre|escapejs }}»? Sus usuarios seguirán desactivados hasta que los actives.{% endif %}');">
                             {% csrf_token %}
-                            <button class="btn btn-sm btn-outline-danger"
-                                    {% if sucursal.n_tickets %}disabled title="Tiene tickets, no se puede eliminar"{% endif %}>Eliminar</button>
+                            {% if sucursal.activa %}
+                            <button class="btn btn-sm btn-outline-danger">Desactivar</button>
+                            {% else %}
+                            <button class="btn btn-sm btn-outline-success">Activar</button>
+                            {% endif %}
                         </form>
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="4" class="text-center text-muted">Aún no hay sucursales. Crea la primera.</td></tr>
+                <tr><td colspan="5" class="text-center text-muted">Aún no hay sucursales. Crea la primera.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

@@ -63,7 +63,7 @@ class CatalogosTests(TestCase):
         for clave in ("areas", "categorias", "puestos"):
             self.assertEqual(self.client.get(reverse(f"lista_{clave}")).status_code, 200)
 
-class EliminarSucursalTests(TestCase):
+class DesactivarSucursalTests(TestCase):
     def setUp(self):
         self.sucursal = Sucursal.objects.create(nombre="Norte")
         self.otra = Sucursal.objects.create(nombre="Sur")
@@ -74,38 +74,36 @@ class EliminarSucursalTests(TestCase):
         self.activo = Usuario.objects.create_user(
             "a@t.com", "Activo", PASSWORD, sucursal=self.sucursal
         )
-        self.inactivo = Usuario.objects.create_user(
-            "i@t.com", "Inactivo", PASSWORD, sucursal=self.sucursal, activo=False
-        )
         self.de_sur = Usuario.objects.create_user(
             "d@t.com", "De Sur", PASSWORD, sucursal=self.otra
         )
         self.client.force_login(self.maestro)
 
-    def test_elimina_y_desactiva_a_sus_usuarios(self):
-        self.client.post(reverse("eliminar_sucursal", args=[self.sucursal.pk]))
-        self.assertFalse(Sucursal.objects.filter(pk=self.sucursal.pk).exists())
-        for usuario in (self.activo, self.inactivo, self.super_en_norte, self.de_sur):
-            usuario.refresh_from_db()
-        self.assertFalse(self.activo.activo)
-        self.assertIsNone(self.activo.sucursal_id)
-        self.assertFalse(self.inactivo.activo)
-        self.assertTrue(self.super_en_norte.activo)
-        self.assertIsNone(self.super_en_norte.sucursal_id)
-        self.assertTrue(self.de_sur.activo)
-        self.assertEqual(self.de_sur.sucursal_id, self.otra.pk)
-
-    def test_no_elimina_si_tiene_tickets(self):
-        Ticket.objects.create(
+    def test_desactiva_usuarios_y_conserva_tickets(self):
+        ticket = Ticket.objects.create(
             titulo="t", descripcion="d", creado_por=self.activo, sucursal=self.sucursal
         )
-        self.client.post(reverse("eliminar_sucursal", args=[self.sucursal.pk]))
-        self.assertTrue(Sucursal.objects.filter(pk=self.sucursal.pk).exists())
-        self.activo.refresh_from_db()
-        self.assertTrue(self.activo.activo)
+        self.client.post(reverse("cambiar_estado_sucursal", args=[self.sucursal.pk]))
+        for objeto in (self.sucursal, self.activo, self.super_en_norte, self.de_sur, ticket):
+            objeto.refresh_from_db()
+        self.assertFalse(self.sucursal.activa)
+        self.assertFalse(self.activo.activo)
+        self.assertEqual(self.activo.sucursal_id, self.sucursal.pk)
+        self.assertTrue(self.super_en_norte.activo)
+        self.assertTrue(self.de_sur.activo)
+        self.assertEqual(ticket.estado, Ticket.Estado.ABIERTO)
+        self.assertIsNone(ticket.cerrado_en)
 
-    def test_no_se_puede_activar_usuario_sin_sucursal(self):
-        self.client.post(reverse("eliminar_sucursal", args=[self.sucursal.pk]))
+    def test_activar_no_reactiva_usuarios(self):
+        self.client.post(reverse("cambiar_estado_sucursal", args=[self.sucursal.pk]))
+        self.client.post(reverse("cambiar_estado_sucursal", args=[self.sucursal.pk]))
+        self.sucursal.refresh_from_db()
+        self.activo.refresh_from_db()
+        self.assertTrue(self.sucursal.activa)
+        self.assertFalse(self.activo.activo)
+
+    def test_no_activa_usuario_de_sucursal_inactiva(self):
+        self.client.post(reverse("cambiar_estado_sucursal", args=[self.sucursal.pk]))
         self.client.post(reverse("cambiar_estado_usuario", args=[self.activo.pk]))
         self.activo.refresh_from_db()
         self.assertFalse(self.activo.activo)

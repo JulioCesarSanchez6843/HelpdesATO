@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST
 from django.db import transaction
 
 from apps.accounts.decorators import admin_required, superadmin_required
+
 from apps.accounts.models import Usuario
 from apps.actividad.models import Evento
 from apps.actividad.registro import registrar as registrar_evento
@@ -155,23 +156,20 @@ def editar_sucursal(request, pk):
 
 @superadmin_required
 @require_POST
-def eliminar_sucursal(request, pk):
-    sucursal = get_object_or_404(Sucursal, pk=pk)
-    bloqueos = (
-        sucursal.tickets.count()
-        + sucursal.area_set.count()
-        + sucursal.categoria_set.count()
-        + sucursal.puesto_set.count()
-    )
-    if bloqueos:
-        messages.error(
+def cambiar_estado_sucursal(request, pk):
+    sucursal = get_object_or_404(Sucursal.objects.defer("logo"), pk=pk)
+    nombre = sucursal.nombre
+
+    if not sucursal.activa:
+        sucursal.activa = True
+        sucursal.save(update_fields=["activa"])
+        messages.success(
             request,
-            f"No se puede eliminar «{sucursal.nombre}»: tiene {bloqueos} "
-            "ticket(s), área(s), categoría(s) o puesto(s) asociados.",
+            f"Sucursal «{nombre}» activada. Sus usuarios siguen desactivados; "
+            "actívalos desde Usuarios.",
         )
         return redirect("lista_sucursales")
 
-    nombre = sucursal.nombre
     with transaction.atomic():
         a_desactivar = list(
             sucursal.usuarios.filter(activo=True, is_superuser=False)
@@ -182,18 +180,18 @@ def eliminar_sucursal(request, pk):
                 Evento.Tipo.USUARIO_ESTADO,
                 request.user,
                 afectado=usuario,
-                detalle=f"Cuenta desactivada por la eliminación de la sucursal «{nombre}».",
+                detalle=f"Cuenta desactivada por la desactivación de la sucursal «{nombre}».",
             )
-        Usuario.objects.filter(pk__in=[u.pk for u in a_desactivar]).update(activo=False)
-        sucursal.delete()
+        Usuario.objects.filter(pk__in=[u.pk for u in a_desactivar]).update(activo=False)  
 
-    if a_desactivar:
-        messages.success(
-            request,
-            f"Sucursal «{nombre}» eliminada. Se desactivaron {len(a_desactivar)} usuario(s).",
-        )
-    else:
-        messages.success(request, f"Sucursal «{nombre}» eliminada.")
+        sucursal.activa = False
+        sucursal.save(update_fields=["activa"])
+
+    messages.success(
+        request,
+        f"Sucursal «{nombre}» desactivada. Usuarios desactivados: {len(a_desactivar)}. "
+        "Sus tickets se conservan sin cambios.",
+    )
     return redirect("lista_sucursales")
 
 @login_required

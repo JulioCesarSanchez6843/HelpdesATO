@@ -14,6 +14,6 @@ urlpatterns += [
     path("sucursales/", views.lista_sucursales, name="lista_sucursales"),
     path("sucursales/nueva/", views.nueva_sucursal, name="nueva_sucursal"),
     path("sucursales/<int:pk>/editar/", views.editar_sucursal, name="editar_sucursal"),
-    path("sucursales/<int:pk>/eliminar/", views.eliminar_sucursal, name="eliminar_sucursal"),
+    path("sucursales/<int:pk>/estado/", views.cambiar_estado_sucursal, name="cambiar_estado_sucursal"),
     path("sucursales/<int:pk>/logo/", views.logo_sucursal, name="logo_sucursal"),
 ]

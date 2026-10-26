@@ -8,7 +8,7 @@ from PIL import Image, ImageOps
 
 from apps.catalog.models import Area, Puesto, Sucursal
 
-from .models import Usuario
+from .models import PreferenciasUsuario, Usuario
 from .permisos import puede_cambiar_password, roles_asignables
 
 class BootstrapFormMixin:
@@ -41,7 +41,7 @@ class _UsuarioBaseForm(BootstrapFormMixin, forms.ModelForm):
         self.fields["area"].required = True
         self.fields["puesto"].required = False
         self.fields["sucursal"].required = False
-        self.fields["sucursal"].queryset = Sucursal.objects.all()
+        self.fields["sucursal"].queryset = Sucursal.objects.filter(activa=True)
         self.fields["correo"].required = True
         self.fields["correo"].error_messages["required"] = "El correo es obligatorio."
         self.fields["correo"].error_messages["invalid"] = "Escribe un correo válido, por ejemplo nombre@empresa.com."
@@ -189,3 +189,35 @@ class CambiarPasswordForm(BootstrapFormMixin, SetPasswordForm):
         if nueva and self.user.check_password(nueva):
             raise ValidationError("La nueva contraseña debe ser diferente a la actual.")
         return nueva
+
+class PreferenciasForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = PreferenciasUsuario
+        fields = [
+            "fuente",
+            "tamano",
+            "interlineado",
+            "pagina_inicio",
+            "correos_activos",
+            "correo_nuevos_tickets",
+            "correo_cambios_estado",
+            "correo_comentarios",
+            "correo_cierres",
+        ]
+        labels = {
+            "fuente": "Tipo de letra",
+            "tamano": "Tamaño de letra",
+            "interlineado": "Espaciado entre líneas",
+            "pagina_inicio": "Página de inicio al entrar",
+            "correos_activos": "Recibir correos",
+            "correo_nuevos_tickets": "Tickets nuevos y confirmación de recibido",
+            "correo_cambios_estado": "Cambios de estado y espera de materiales",
+            "correo_comentarios": "Comentarios nuevos",
+            "correo_cierres": "Cierres, rechazos y cierres forzados",
+        }
+
+class RecuperarPasswordForm(BootstrapFormMixin, forms.Form):
+    correo = forms.EmailField(
+        label="Correo electrónico",
+        widget=forms.EmailInput(attrs={"autofocus": True, "autocomplete": "email"}),
+    )

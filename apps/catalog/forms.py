@@ -71,7 +71,7 @@ class _CatalogoForm(BootstrapFormMixin, forms.ModelForm):
 class _CatalogoPorSucursalForm(_CatalogoForm):
     sucursal_destino = forms.ModelChoiceField(
         label="Sucursal",
-        queryset=Sucursal.objects.all(),
+            queryset=Sucursal.objects.filter(activa=True),
         required=False,
         empty_label="General (todas las sucursales)",
     )
@@ -138,11 +138,11 @@ class SucursalForm(_CatalogoForm):
         widget=forms.FileInput(attrs={"accept": "image/jpeg,image/png", "class": "d-none"}),
     )
     quitar_logo = forms.BooleanField(required=False, widget=forms.HiddenInput())
-    field_order = ["nombre", "color_barra", "color_primario", "logo_archivo", "quitar_logo"]
+    field_order = ["nombre", "codigo_distribuidor", "color_barra", "color_primario", "logo_archivo", "quitar_logo"]
 
     class Meta:
         model = Sucursal
-        fields = ["nombre", "color_barra", "color_primario"]
+        fields = ["nombre", "codigo_distribuidor", "color_barra", "color_primario"]
         labels = {
             "color_barra": "Color de la barra",
             "color_primario": "Color de iconos y botones",
@@ -152,9 +152,28 @@ class SucursalForm(_CatalogoForm):
             "color_primario": "Iconos, botones y detalles de la interfaz.",
         }
         widgets = {
+            "codigo_distribuidor": forms.TextInput(attrs={
+                "maxlength": "3",
+                "inputmode": "numeric",
+                "pattern": "[0-9]{3}",
+                "placeholder": "Ej. 001",
+            }),
             "color_barra": forms.TextInput(attrs={"type": "color", "class": "form-control-color"}),
             "color_primario": forms.TextInput(attrs={"type": "color", "class": "form-control-color"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["codigo_distribuidor"].required = True
+
+    def clean_codigo_distribuidor(self):
+        codigo = (self.cleaned_data.get("codigo_distribuidor") or "").strip()
+        repetidos = Sucursal.objects.filter(codigo_distribuidor=codigo)
+        if self.instance.pk:
+            repetidos = repetidos.exclude(pk=self.instance.pk)
+        if repetidos.exists():
+            raise ValidationError("Ya existe una sucursal con ese código.")
+        return codigo
 
     def clean_logo_archivo(self):
         archivo = self.cleaned_data.get("logo_archivo")

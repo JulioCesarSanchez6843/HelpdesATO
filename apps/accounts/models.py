@@ -60,6 +60,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
 
     USERNAME_FIELD = "correo"
+    EMAIL_FIELD = "correo"
     REQUIRED_FIELDS = ["nombre"]
 
     objects = UsuarioManager()
@@ -174,3 +175,137 @@ class FotoPerfil(models.Model):
 
     def __str__(self):
         return f"Foto de {self.usuario}"
+
+_FAMILIAS_CSS = {
+    "INTER": '"Inter", sans-serif',
+    "ROBOTO": '"Roboto", sans-serif',
+    "OPEN_SANS": '"Open Sans", sans-serif',
+    "LEXEND": '"Lexend", sans-serif',
+    "ATKINSON": '"Atkinson Hyperlegible", sans-serif',
+}
+
+_URLS_FUENTE = {
+    "INTER": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
+    "ROBOTO": "https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap",
+    "OPEN_SANS": "https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap",
+    "LEXEND": "https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap",
+    "ATKINSON": "https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap",
+}
+
+_TAMANOS_CSS = {
+    "PEQUENO": "87.5%",
+    "NORMAL": "",
+    "GRANDE": "112.5%",
+    "MUY_GRANDE": "125%",
+}
+
+_INTERLINEADOS_CSS = {
+    "NORMAL": "",
+    "AMPLIO": "1.75",
+}
+
+_URLS_INICIO = {
+    "TICKETS": "lista_tickets",
+    "NOTIFICACIONES": "lista_notificaciones",
+    "ACTIVIDAD": "actividad",
+}
+
+_CAMPO_CORREO = {
+    "nuevo_ticket_admin": "correo_nuevos_tickets",
+    "ticket_recibido": "correo_nuevos_tickets",
+    "cambio_estado": "correo_cambios_estado",
+    "espera_materiales": "correo_cambios_estado",
+    "nuevo_comentario": "correo_comentarios",
+    "ticket_cerrado": "correo_cierres",
+    "cierre_confirmado_admin": "correo_cierres",
+    "cierre_rechazado_admin": "correo_cierres",
+    "cierre_forzado": "correo_cierres",
+}
+
+
+class PreferenciasUsuario(models.Model):
+    class Fuente(models.TextChoices):
+        PREDETERMINADA = "PREDETERMINADA", "Predeterminada"
+        INTER = "INTER", "Inter"
+        ROBOTO = "ROBOTO", "Roboto"
+        OPEN_SANS = "OPEN_SANS", "Open Sans"
+        LEXEND = "LEXEND", "Lexend (facilita la lectura)"
+        ATKINSON = "ATKINSON", "Atkinson Hyperlegible (vista cansada)"
+
+    class Tamano(models.TextChoices):
+        PEQUENO = "PEQUENO", "Pequeño"
+        NORMAL = "NORMAL", "Normal"
+        GRANDE = "GRANDE", "Grande"
+        MUY_GRANDE = "MUY_GRANDE", "Muy grande"
+
+    class Interlineado(models.TextChoices):
+        NORMAL = "NORMAL", "Normal"
+        AMPLIO = "AMPLIO", "Amplio"
+
+    class PaginaInicio(models.TextChoices):
+        TICKETS = "TICKETS", "Tickets"
+        NOTIFICACIONES = "NOTIFICACIONES", "Notificaciones"
+        ACTIVIDAD = "ACTIVIDAD", "Actividad"
+
+    usuario = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="preferencias",
+    )
+    fuente = models.CharField(
+        max_length=20, choices=Fuente.choices, default=Fuente.PREDETERMINADA
+    )
+    tamano = models.CharField(
+        max_length=12, choices=Tamano.choices, default=Tamano.NORMAL
+    )
+    interlineado = models.CharField(
+        max_length=10, choices=Interlineado.choices, default=Interlineado.NORMAL
+    )
+    pagina_inicio = models.CharField(
+        max_length=16, choices=PaginaInicio.choices, default=PaginaInicio.TICKETS
+    )
+    correos_activos = models.BooleanField(default=True)
+    correo_nuevos_tickets = models.BooleanField(default=True)
+    correo_cambios_estado = models.BooleanField(default=True)
+    correo_comentarios = models.BooleanField(default=True)
+    correo_cierres = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name_plural = "Preferencias de usuarios"
+
+    def __str__(self):
+        return f"Preferencias de {self.usuario}"
+
+    @classmethod
+    def de(cls, usuario):
+        if usuario is None or not usuario.is_authenticated:
+            return cls()
+        return cls.objects.filter(usuario=usuario).first() or cls(usuario=usuario)
+
+    @property
+    def familia_css(self):
+        return _FAMILIAS_CSS.get(self.fuente, "")
+
+    @property
+    def url_fuente(self):
+        return _URLS_FUENTE.get(self.fuente, "")
+
+    @property
+    def tamano_css(self):
+        return _TAMANOS_CSS.get(self.tamano, "")
+
+    @property
+    def interlineado_css(self):
+        return _INTERLINEADOS_CSS.get(self.interlineado, "")
+
+    @property
+    def url_inicio(self):
+        return _URLS_INICIO.get(self.pagina_inicio, "lista_tickets")
+
+    def permite_correo(self, plantilla):
+        campo = _CAMPO_CORREO.get(plantilla)
+        if campo is None:
+            return True
+        if not self.correos_activos:
+            return False
+        return getattr(self, campo)

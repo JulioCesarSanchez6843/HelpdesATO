@@ -7,6 +7,7 @@ from django.core import mail
 from django.db import transaction
 from django.template import TemplateDoesNotExist
 from django.template.loader import render_to_string
+from apps.accounts.models import PreferenciasUsuario
 
 from . import acceso
 
@@ -59,6 +60,8 @@ def construir(
     mensajes = []
     for usuario in usuarios:
         if not usuario or not usuario.activo or not usuario.correo:
+            continue
+        if not PreferenciasUsuario.de(usuario).permite_correo(plantilla):
             continue
         clave = usuario.correo.lower()
         if clave in vistos:

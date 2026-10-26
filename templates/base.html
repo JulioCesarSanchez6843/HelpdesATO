@@ -12,6 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@700&display=swap" rel="stylesheet">
     <link href="{% static 'css/tollocan.css' %}" rel="stylesheet">
+    {% if prefs.url_fuente %}<link href="{{ prefs.url_fuente }}" rel="stylesheet">{% endif %}
     <style>
         :root {
             --tollocan-rojo: {{ tema.primario }};
@@ -28,7 +29,10 @@
             --tollocan-rgb: {{ tema.rgb }};
             --tollocan-oscuro-rgb: {{ tema.rgb_oscuro }};
             --tollocan-texto: {{ tema.texto }};
+            {% if prefs.familia_css %}--bs-body-font-family: {{ prefs.familia_css|safe }};{% endif %}
+            {% if prefs.interlineado_css %}--bs-body-line-height: {{ prefs.interlineado_css }};{% endif %}
         }
+        {% if prefs.tamano_css %}html { font-size: {{ prefs.tamano_css }}; }{% endif %}
     </style>
 </head>
 <body>
@@ -59,7 +63,7 @@
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li><a class="dropdown-item" href="{% url 'mi_perfil' %}"><i class="bi bi-person-gear me-2"></i>Mi perfil</a></li>
-                    <li><a class="dropdown-item" href="{% url 'cambiar_password' %}"><i class="bi bi-key me-2"></i>Cambiar mi contraseña</a></li>
+                    <li><a class="dropdown-item" href="{% url 'ajustes' %}"><i class="bi bi-sliders me-2"></i>Ajustes</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <form method="post" action="{% url 'logout' %}">

@@ -14,6 +14,13 @@
             {% for error in form.nombre.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
         </div>
 
+        <div class="mb-3">
+            <label for="{{ form.codigo_distribuidor.id_for_label }}" class="form-label">{{ form.codigo_distribuidor.label }} *</label>
+            {{ form.codigo_distribuidor }}
+            <div class="form-text">3 dígitos, único por sucursal.</div>
+            {% for error in form.codigo_distribuidor.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+
         <div class="row g-3 mb-4">
             <div class="col-sm-6">
                 <label for="{{ form.color_barra.id_for_label }}" class="form-label">{{ form.color_barra.label }}</label>

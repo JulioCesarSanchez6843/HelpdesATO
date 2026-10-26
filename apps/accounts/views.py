@@ -1,12 +1,21 @@
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.tokens import default_token_generator
+from django.core.cache import cache
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.http import url_has_allowed_host_and_scheme
+from django.urls import reverse
+from django.utils.encoding import force_bytes
+from django.utils.http import (
+    url_has_allowed_host_and_scheme,
+    urlsafe_base64_decode,
+    urlsafe_base64_encode,
+)
 from django.views.decorators.http import require_POST
+
+from django.contrib.auth.decorators import login_required
 
 from datetime import timedelta
 
@@ -14,11 +23,19 @@ from django.utils import timezone
 
 from apps.actividad.models import Evento
 from apps.actividad.registro import registrar as registrar_evento
+from apps.tickets import emails as correos
 from apps.tickets.models import Notificacion
 
 from .decorators import admin_required
-from .forms import CambiarPasswordForm, FotoPerfilForm, UsuarioCrearForm, UsuarioEditarForm
-from .models import FotoPerfil, Usuario
+from .forms import (
+    CambiarPasswordForm,
+    FotoPerfilForm,
+    PreferenciasForm,
+    RecuperarPasswordForm,
+    UsuarioCrearForm,
+    UsuarioEditarForm,
+)
+from .models import FotoPerfil, PreferenciasUsuario, Usuario
 from .permisos import (
     puede_cambiar_password,
     quienes_pueden_cambiar,
@@ -28,7 +45,7 @@ from apps.catalog.models import Sucursal
 
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect(settings.LOGIN_REDIRECT_URL)
+        return redirect(PreferenciasUsuario.de(request.user).url_inicio)
 
     siguiente = request.POST.get("next") or request.GET.get("next") or ""
     contexto = {"next": siguiente}
@@ -47,7 +64,7 @@ def login_view(request):
             )
             if siguiente and destino_seguro:
                 return redirect(siguiente)
-            return redirect(settings.LOGIN_REDIRECT_URL)
+            return redirect(PreferenciasUsuario.de(request.user).url_inicio)
         contexto["error"] = "Correo o contraseña incorrectos."
 
     return render(request, "accounts/login.html", contexto)
@@ -157,6 +174,11 @@ def cambiar_estado_usuario(request, pk):
             request,
             "Este usuario no tiene sucursal. Edítalo y asígnale una antes de activarlo.",
         )
+    elif not usuario.activo and usuario.sucursal_id and not usuario.sucursal.activa:
+        messages.error(
+            request,
+            "La sucursal de este usuario está desactivada. Actívala antes de activar al usuario.",
+        )
     else:
         usuario.activo = not usuario.activo
         usuario.save(update_fields=["activo"])
@@ -189,6 +211,29 @@ def mi_perfil(request):
         form = FotoPerfilForm()
     return render(request, "accounts/perfil.html", {"form": form})
 
+@login_required
+def ajustes(request):
+    preferencias = PreferenciasUsuario.de(request.user)
+    if request.method == "POST":
+        if request.POST.get("accion") == "restablecer":
+            PreferenciasUsuario.objects.filter(usuario=request.user).delete()
+            messages.success(request, "Ajustes restablecidos a los valores originales.")
+            return redirect("ajustes")
+        form = PreferenciasForm(request.POST, instance=preferencias)
+        if form.is_valid():
+            guardada = form.save(commit=False)
+            guardada.usuario = request.user
+            guardada.save()
+            messages.success(request, "Ajustes guardados.")
+            return redirect("ajustes")
+    else:
+        form = PreferenciasForm(instance=preferencias)
+    return render(request, "accounts/ajustes.html", {"form": form})
+
+
+@login_required
+def inicio(request):
+    return redirect(PreferenciasUsuario.de(request.user).url_inicio)
 
 @login_required
 def foto_usuario(request, pk):
@@ -251,3 +296,76 @@ def solicitar_cambio_password(request):
         ])
         messages.success(request, "Solicitud enviada.")
     return redirect("mi_perfil")
+
+def _enviar_enlace_recuperacion(usuario):
+    uid = urlsafe_base64_encode(force_bytes(usuario.pk))
+    token = default_token_generator.make_token(usuario)
+    url = settings.SITE_URL + reverse("restablecer_password", args=[uid, token])
+    mensajes = correos.construir(
+        [usuario],
+        "Restablece tu contraseña",
+        "restablecer_password",
+        {
+            "nombre": usuario.nombre,
+            "url_restablecer": url,
+            "horas": settings.PASSWORD_RESET_TIMEOUT // 3600,
+        },
+        carpeta="accounts/emails",
+    )
+    correos.enviar_tras_commit(mensajes)
+
+
+def recuperar_password(request):
+    if request.method == "POST":
+        form = RecuperarPasswordForm(request.POST)
+        if form.is_valid():
+            correo = form.cleaned_data["correo"].strip()
+            if cache.add(f"recuperar:{correo.lower()}", 1, 300):
+                usuario = Usuario.objects.filter(
+                    correo__iexact=correo, activo=True
+                ).first()
+                if usuario:
+                    _enviar_enlace_recuperacion(usuario)
+            messages.info(
+                request,
+                "Si el correo está registrado, te enviamos un enlace para restablecer "
+                "tu contraseña. Revisa también tu carpeta de spam; si no llega, "
+                "inténtalo de nuevo en unos minutos.",
+            )
+            return redirect("login")
+    else:
+        form = RecuperarPasswordForm()
+    return render(request, "accounts/recuperar_password.html", {"form": form})
+
+
+def restablecer_password(request, uidb64, token):
+    try:
+        pk = urlsafe_base64_decode(uidb64).decode()
+        usuario = Usuario.objects.get(pk=pk, activo=True)
+    except (TypeError, ValueError, OverflowError, Usuario.DoesNotExist):
+        usuario = None
+
+    if usuario is None or not default_token_generator.check_token(usuario, token):
+        return render(request, "accounts/restablecer_password.html", {"valido": False})
+
+    if request.method == "POST":
+        form = CambiarPasswordForm(usuario, request.POST)
+        if form.is_valid():
+            usuario = form.save()
+            usuario.debe_cambiar_password = False
+            usuario.save(update_fields=["debe_cambiar_password"])
+            registrar_evento(
+                Evento.Tipo.PASSWORD_PROPIO,
+                usuario,
+                afectado=usuario,
+                detalle="Restableció su contraseña desde el enlace enviado por correo.",
+            )
+            messages.success(request, "Contraseña restablecida. Ya puedes iniciar sesión.")
+            return redirect("login")
+    else:
+        form = CambiarPasswordForm(usuario)
+    return render(
+        request,
+        "accounts/restablecer_password.html",
+        {"valido": True, "form": form},
+    )

@@ -54,6 +54,14 @@ class Puesto(CatalogoBase):
 
 class Sucursal(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
+    codigo_distribuidor = models.CharField(
+        "Código de distribuidor",
+        max_length=3,
+        unique=True,
+        null=True,
+        blank=True,
+        validators=[RegexValidator(r"^\d{3}$", "Debe tener exactamente 3 dígitos.")],
+    )
     color_primario = models.CharField(
         max_length=7,
         default="#c8102e",
@@ -66,6 +74,7 @@ class Sucursal(models.Model):
     )
     logo = models.BinaryField(null=True, blank=True, editable=False)
     logo_actualizado_en = models.DateTimeField(null=True, blank=True, editable=False)
+    activa = models.BooleanField(default=True)
 
     class Meta:
         verbose_name_plural = "Sucursales"
