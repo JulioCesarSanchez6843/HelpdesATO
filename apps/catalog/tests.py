@@ -3,15 +3,16 @@ from django.urls import reverse
 
 from apps.accounts.models import Usuario
 from apps.tickets.models import Ticket
-from .models import Area, Categoria, Puesto
+from .models import Area, Categoria, Puesto, Sucursal
 
 PASSWORD = "pw-segura-123"
 
 
 class CatalogosTests(TestCase):
     def setUp(self):
-        self.admin = Usuario.objects.create_user("a@t.com", "Admin", PASSWORD, rol="ADMIN")
-        self.user = Usuario.objects.create_user("u@t.com", "User", PASSWORD)
+        self.sucursal = Sucursal.objects.create(nombre="Central")
+        self.admin = Usuario.objects.create_user("a@t.com", "Admin", PASSWORD, rol="SUPERADMIN")
+        self.user = Usuario.objects.create_user("u@t.com", "User", PASSWORD, sucursal=self.sucursal)
 
     def test_usuario_normal_no_puede_crear_ni_ver(self):
         self.client.force_login(self.user)
@@ -61,3 +62,50 @@ class CatalogosTests(TestCase):
         self.client.force_login(self.admin)
         for clave in ("areas", "categorias", "puestos"):
             self.assertEqual(self.client.get(reverse(f"lista_{clave}")).status_code, 200)
+
+class EliminarSucursalTests(TestCase):
+    def setUp(self):
+        self.sucursal = Sucursal.objects.create(nombre="Norte")
+        self.otra = Sucursal.objects.create(nombre="Sur")
+        self.maestro = Usuario.objects.create_superuser("m@t.com", "Maestro", PASSWORD)
+        self.super_en_norte = Usuario.objects.create_user(
+            "s@t.com", "Super Norte", PASSWORD, rol="SUPERADMIN", sucursal=self.sucursal
+        )
+        self.activo = Usuario.objects.create_user(
+            "a@t.com", "Activo", PASSWORD, sucursal=self.sucursal
+        )
+        self.inactivo = Usuario.objects.create_user(
+            "i@t.com", "Inactivo", PASSWORD, sucursal=self.sucursal, activo=False
+        )
+        self.de_sur = Usuario.objects.create_user(
+            "d@t.com", "De Sur", PASSWORD, sucursal=self.otra
+        )
+        self.client.force_login(self.maestro)
+
+    def test_elimina_y_desactiva_a_sus_usuarios(self):
+        self.client.post(reverse("eliminar_sucursal", args=[self.sucursal.pk]))
+        self.assertFalse(Sucursal.objects.filter(pk=self.sucursal.pk).exists())
+        for usuario in (self.activo, self.inactivo, self.super_en_norte, self.de_sur):
+            usuario.refresh_from_db()
+        self.assertFalse(self.activo.activo)
+        self.assertIsNone(self.activo.sucursal_id)
+        self.assertFalse(self.inactivo.activo)
+        self.assertTrue(self.super_en_norte.activo)
+        self.assertIsNone(self.super_en_norte.sucursal_id)
+        self.assertTrue(self.de_sur.activo)
+        self.assertEqual(self.de_sur.sucursal_id, self.otra.pk)
+
+    def test_no_elimina_si_tiene_tickets(self):
+        Ticket.objects.create(
+            titulo="t", descripcion="d", creado_por=self.activo, sucursal=self.sucursal
+        )
+        self.client.post(reverse("eliminar_sucursal", args=[self.sucursal.pk]))
+        self.assertTrue(Sucursal.objects.filter(pk=self.sucursal.pk).exists())
+        self.activo.refresh_from_db()
+        self.assertTrue(self.activo.activo)
+
+    def test_no_se_puede_activar_usuario_sin_sucursal(self):
+        self.client.post(reverse("eliminar_sucursal", args=[self.sucursal.pk]))
+        self.client.post(reverse("cambiar_estado_usuario", args=[self.activo.pk]))
+        self.activo.refresh_from_db()
+        self.assertFalse(self.activo.activo)

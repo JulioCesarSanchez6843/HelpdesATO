@@ -2,6 +2,8 @@
 <span class="badge bg-primary-subtle text-primary-emphasis">{{ ticket.get_estado_display }}</span>
 {% elif ticket.estado == "EN_PROCESO" %}
 <span class="badge bg-warning-subtle text-warning-emphasis">{{ ticket.get_estado_display }}</span>
+{% elif ticket.estado == "EN_ESPERA" %}
+<span class="badge bg-secondary-subtle text-secondary-emphasis">{{ ticket.get_estado_display }}</span>
 {% elif ticket.estado == "POR_CONFIRMAR" %}
 <span class="badge bg-info-subtle text-info-emphasis">{{ ticket.get_estado_display }}</span>
 {% else %}

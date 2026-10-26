@@ -5,15 +5,17 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import Usuario
-from apps.catalog.models import Area
+from apps.catalog.models import Area, Sucursal
 from apps.tickets.models import Ticket
 
 
 class ReportesTests(TestCase):
     def setUp(self):
         self.area = Area.objects.create(nombre="Ventas")
-        self.admin = Usuario.objects.create_user("a@t.com", "Admin", "pw-segura-123", rol="ADMIN")
-        self.user = Usuario.objects.create_user("u@t.com", "User", "pw-segura-123")
+        self.sucursal = Sucursal.objects.create(nombre="Central")
+        self.admin = Usuario.objects.create_user("a@t.com", "Admin", "pw-segura-123", rol="SUPERADMIN")
+        self.user = Usuario.objects.create_user(
+            "u@t.com", "User", "pw-segura-123", sucursal=self.sucursal)
 
     def test_usuario_normal_no_entra(self):
         self.client.force_login(self.user)
@@ -53,9 +55,11 @@ class EstadisticasYExcelTests(TestCase):
         self.sistemas = Area.objects.create(nombre="Sistemas")
         self.ventas = Area.objects.create(nombre="Ventas")
         self.puesto = Puesto.objects.create(nombre="Analista")
-        self.admin = Usuario.objects.create_user("a@t.com", "Admin", "pw-segura-123", rol="ADMIN")
+        self.sucursal = Sucursal.objects.create(nombre="Central")
+        self.admin = Usuario.objects.create_user("a@t.com", "Admin", "pw-segura-123", rol="SUPERADMIN")
         self.user = Usuario.objects.create_user(
-            "u@t.com", "Usuario Uno", "pw-segura-123", area=self.ventas, puesto=self.puesto)
+            "u@t.com", "Usuario Uno", "pw-segura-123", area=self.ventas,
+            puesto=self.puesto, sucursal=self.sucursal)
 
     def _ticket(self, titulo, area, categoria, estado="ABIERTO", horas=None, **extra):
         t = Ticket.objects.create(
@@ -118,13 +122,8 @@ class EstadisticasYExcelTests(TestCase):
         abierto = self._ticket("abierto", self.sistemas, self.red)
         cerrado = self._ticket(
             "cerrado", self.sistemas, self.red, estado="CERRADO", horas=5,
-            numero_serie="ABC123", nota_resolucion="Se cambió el cable")
-        Historial.objects.create(
-            ticket=cerrado, usuario=self.admin, tipo="CAMBIO_ESTADO",
-            contenido="Estado cambiado de «En proceso» a «Por confirmar». Nota de resolución: x")
-        Historial.objects.create(
-            ticket=cerrado, usuario=self.user, tipo="CAMBIO_ESTADO",
-            contenido="Estado cambiado de «Por confirmar» a «Cerrado». El usuario confirmó que el problema quedó resuelto.")
+            numero_serie="ABC123", nota_resolucion="Se cambió el cable",
+            resuelto_por=self.admin)
 
         self.client.force_login(self.admin)
         r = self.client.get(reverse("exportar_resueltos"))
@@ -149,6 +148,23 @@ class EstadisticasYExcelTests(TestCase):
         self.assertEqual(fila["Forma de cierre"], "Confirmado por el usuario")
         self.assertEqual(fila["Nota de resolución"], "Se cambió el cable")
         self.assertNotIn(abierto.pk, [f[0] for f in filas])
+
+    def test_excel_distingue_cierre_forzado_por_justificacion(self):
+        from io import BytesIO
+        from openpyxl import load_workbook
+
+        self._ticket(
+            "forzado", self.sistemas, self.red, estado="CERRADO", horas=3,
+            resuelto_por=self.admin,
+            justificacion_cierre="El usuario no respondió en una semana")
+        self.client.force_login(self.admin)
+        r = self.client.get(reverse("exportar_resueltos"))
+        self.assertEqual(r.status_code, 200)
+        hoja = load_workbook(BytesIO(r.content))["Tickets resueltos"]
+        enc = [c.value for c in hoja[1]]
+        fila = dict(zip(enc, next(hoja.iter_rows(min_row=2, values_only=True))))
+        self.assertEqual(fila["Forma de cierre"], "Cerrado por el administrador")
+        self.assertEqual(fila["Resuelto por"], "Admin")
 
     def test_excel_filtra_por_fecha_de_cierre(self):
         from io import BytesIO

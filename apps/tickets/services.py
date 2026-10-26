@@ -9,7 +9,7 @@ from apps.actividad.models import Evento
 from apps.actividad.registro import registrar as registrar_evento
 
 from . import emails, imagenes
-from .models import AdjuntoTicket, Historial, Notificacion, Ticket
+from .models import AdjuntoTicket, Comentario, Historial, Notificacion, Ticket
 
 _SAL_TOKEN = "tickets.confirmar-cierre"
 _SAL_PROCESO = "tickets.marcar-en-proceso"
@@ -197,10 +197,40 @@ def snapshot(ticket):
     }
 
 
-def registrar_gestion(ticket, actor, antes):
+def _encargados_activos(ticket):
+    return list(
+        Usuario.objects.filter(
+            rol=Usuario.Rol.ENCARGADO,
+            sucursal_id=ticket.sucursal_id,
+            activo=True,
+        )
+    )
+
+
+def _avisar_espera_a_encargados(ticket, actor, motivo):
+    encargados = _encargados_activos(ticket)
+    _notificar(
+        encargados,
+        Notificacion.Tipo.ESPERA_MATERIALES,
+        f"{actor.nombre} puso en espera de materiales el ticket #{ticket.pk}: {motivo}",
+        ticket,
+        actor,
+    )
+    emails.enviar_tras_commit(
+        emails.construir(
+            _sin(encargados, actor),
+            f"Ticket #{ticket.pk} en espera de materiales",
+            "espera_materiales",
+            _contexto(ticket, motivo=motivo, becario=actor),
+        )
+    )
+
+
+def registrar_gestion(ticket, actor, antes, motivo=""):
     if ticket.estado != antes["estado"]:
         anterior = dict(Ticket.Estado.choices)[antes["estado"]]
         por_confirmar = ticket.estado == Ticket.Estado.POR_CONFIRMAR
+        en_espera = ticket.estado == Ticket.Estado.EN_ESPERA
 
         if por_confirmar:
             ticket.resuelto_por = actor
@@ -214,6 +244,8 @@ def registrar_gestion(ticket, actor, antes):
         )
         if por_confirmar:
             texto += f" Nota de resolución: {ticket.nota_resolucion}"
+        if en_espera and motivo:
+            texto += f" Motivo: {motivo}"
 
         Historial.objects.create(
             ticket=ticket,
@@ -261,7 +293,11 @@ def registrar_gestion(ticket, actor, antes):
             )
         emails.enviar_tras_commit(mensajes)
 
+        if en_espera and actor.es_becario:
+            _avisar_espera_a_encargados(ticket, actor, motivo)
+
     if ticket.categoria_id != antes["categoria_id"]:
+
         nueva = ticket.categoria.nombre if ticket.categoria else "Sin categoría"
         registrar_evento(
             Evento.Tipo.TICKET_CATEGORIA,
@@ -476,3 +512,45 @@ def asignar_ticket(ticket, actor, destino):
             ticket,
             actor,
         )
+
+def agregar_comentario(ticket, autor, contenido, interno=False):
+    comentario = Comentario.objects.create(
+        ticket=ticket, autor=autor, contenido=contenido, interno=interno
+    )
+    registrar_evento(
+        Evento.Tipo.TICKET_COMENTARIO,
+        autor,
+        ticket=ticket,
+        detalle=("Nota interna: " if interno else "") + contenido[:300],
+    )
+
+    if interno:
+        destinatarios = _admins_activos(ticket)
+        if ticket.asignado_a_id:
+            destinatarios.append(ticket.asignado_a)
+    elif autor.pk == ticket.creado_por_id:
+        destinatarios = (
+            [ticket.asignado_a] if ticket.asignado_a_id else _personal_activo(ticket)
+        )
+    else:
+        destinatarios = [ticket.creado_por]
+
+    _notificar(
+        destinatarios,
+        Notificacion.Tipo.COMENTARIO,
+        f"{autor.nombre} escribió en el ticket #{ticket.pk}.",
+        ticket,
+        autor,
+    )
+
+    if not interno:
+        emails.enviar_tras_commit(
+            emails.construir(
+                _sin(destinatarios, autor),
+                f"Nuevo mensaje en el ticket #{ticket.pk}",
+                "nuevo_comentario",
+                _contexto(ticket, comentario=comentario, autor=autor),
+                contexto_usuario=lambda destinatario: {"destinatario": destinatario},
+            )
+        )
+    return comentario

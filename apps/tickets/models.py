@@ -7,6 +7,7 @@ class Ticket(models.Model):
     class Estado(models.TextChoices):
         ABIERTO = "ABIERTO", "Abierto"
         EN_PROCESO = "EN_PROCESO", "En proceso"
+        EN_ESPERA = "EN_ESPERA", "En espera de materiales"
         POR_CONFIRMAR = "POR_CONFIRMAR", "Por confirmar"
         CERRADO = "CERRADO", "Cerrado"
 
@@ -162,6 +163,8 @@ class Notificacion(models.Model):
         CIERRE_RECHAZADO = "CIERRE_RECHAZADO", "Cierre rechazado"
         TICKET_ASIGNADO = "TICKET_ASIGNADO", "Ticket asignado"
         SOLICITUD_PASSWORD = "SOLICITUD_PASSWORD", "Solicitud de contraseña"
+        COMENTARIO = "COMENTARIO", "Nuevo comentario"
+        ESPERA_MATERIALES = "ESPERA_MATERIALES", "En espera de materiales"
 
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -204,3 +207,25 @@ class Notificacion(models.Model):
             self.leida = True
             self.leida_en = timezone.now()
             self.save(update_fields=["leida", "leida_en"])
+
+class Comentario(models.Model):
+    ticket = models.ForeignKey(
+        Ticket,
+        on_delete=models.CASCADE,
+        related_name="comentarios",
+    )
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="+",
+    )
+    contenido = models.TextField()
+    interno = models.BooleanField(default=False)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["creado_en", "id"]
+        verbose_name_plural = "Comentarios"
+
+    def __str__(self):
+        return f"Comentario de {self.autor} en ticket #{self.ticket_id}"

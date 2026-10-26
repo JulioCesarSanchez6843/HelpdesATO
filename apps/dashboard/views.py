@@ -1,9 +1,8 @@
 from datetime import timedelta
 from io import BytesIO
+from django.db.models import Avg, Count, DurationField, ExpressionWrapper, F, Q
+from apps.accounts.decorators import admin_required, superadmin_required
 
-from django.db.models import (
-    Avg, Count, DurationField, ExpressionWrapper, F, OuterRef, Q, Subquery,
-)
 from django.db.models.functions import TruncDate, TruncMonth
 from django.http import HttpResponse
 from django.shortcuts import render
@@ -16,7 +15,7 @@ from openpyxl.utils import get_column_letter
 
 from apps.accounts.decorators import admin_required
 from apps.accounts.models import Usuario
-from apps.tickets.models import Historial, Ticket
+from apps.tickets.models import Ticket
 
 DURACION_CIERRE = ExpressionWrapper(
     F("cerrado_en") - F("creado_en"), output_field=DurationField()
@@ -91,6 +90,7 @@ def reportes(request):
     total = tickets.count()
     abiertos = tickets.filter(estado=Ticket.Estado.ABIERTO).count()
     en_proceso = tickets.filter(estado=Ticket.Estado.EN_PROCESO).count()
+    en_espera = tickets.filter(estado=Ticket.Estado.EN_ESPERA).count()
     por_confirmar = tickets.filter(estado=Ticket.Estado.POR_CONFIRMAR).count()
     cerrados = tickets.filter(estado=Ticket.Estado.CERRADO).count()
 
@@ -164,8 +164,8 @@ def reportes(request):
             "data": [por_dia.get(d, 0) for d in dias],
         },
         "distribucion": {
-            "labels": ["Abiertos", "En proceso", "Por confirmar", "Cerrados"],
-            "data": [abiertos, en_proceso, por_confirmar, cerrados],
+            "labels": ["Abiertos", "En proceso", "Por confirmar", "Cerrados", "En espera"],
+            "data": [abiertos, en_proceso, por_confirmar, cerrados, en_espera],
         },
         "categorias": _grafica_barras(por_categoria),
         "areas": _grafica_barras(por_area),
@@ -180,6 +180,7 @@ def reportes(request):
         "total": total,
         "abiertos": abiertos,
         "en_proceso": en_proceso,
+        "en_espera": en_espera,
         "por_confirmar": por_confirmar,
         "cerrados": cerrados,
         "tiempo_promedio_horas": tiempo_promedio_horas,
@@ -225,19 +226,6 @@ def _estilizar_encabezado(hoja, fila, columnas):
         celda.fill = relleno
         celda.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
-
-def _ultima_accion(texto):
-    """Subconsulta: último movimiento del historial cuyo texto contiene `texto`."""
-    return (
-        Historial.objects.filter(
-            ticket=OuterRef("pk"),
-            tipo=Historial.Tipo.CAMBIO_ESTADO,
-            contenido__contains=texto,
-        )
-        .order_by("-fecha", "-id")
-    )
-
-
 @admin_required
 def exportar_resueltos(request):
     """Descarga en Excel los tickets resueltos (cerrados) con todos sus datos.
@@ -245,17 +233,13 @@ def exportar_resueltos(request):
     desde = _fecha_get(request, "desde")
     hasta = _fecha_get(request, "hasta")
 
-    resueltos_por = _ultima_accion("a «Por confirmar»")
-    cierres = _ultima_accion("a «Cerrado»")
-
     tickets = (
         _tickets_alcance(request).filter(estado=Ticket.Estado.CERRADO)
-        .select_related("area", "categoria", "creado_por", "creado_por__area", "creado_por__puesto")
-        .annotate(
-            resuelto_por=Subquery(resueltos_por.values("usuario__nombre")[:1]),
-            texto_cierre=Subquery(cierres.values("contenido")[:1]),
-            num_adjuntos=Count("adjuntos"),
+        .select_related(
+            "area", "categoria", "creado_por", "creado_por__area",
+            "creado_por__puesto", "resuelto_por",
         )
+        .annotate(num_adjuntos=Count("adjuntos"))
         .order_by("-cerrado_en", "-id")
     )
     if desde:
@@ -295,12 +279,10 @@ def exportar_resueltos(request):
             suma_horas += horas_cierre
             con_horas += 1
 
-        if t.texto_cierre and "administrador" in t.texto_cierre:
+        if t.justificacion_cierre:
             forma_cierre = "Cerrado por el administrador"
-        elif t.texto_cierre:
-            forma_cierre = "Confirmado por el usuario"
         else:
-            forma_cierre = ""
+            forma_cierre = "Confirmado por el usuario"
 
         solicitante = t.creado_por
         valores = [
@@ -313,8 +295,10 @@ def exportar_resueltos(request):
             solicitante.puesto.nombre if solicitante.puesto else "",
             _local(t.creado_en), _local(t.resuelto_en), _local(t.cerrado_en),
             horas_resolver, horas_cierre,
-            t.resuelto_por or "", forma_cierre, t.nota_resolucion, t.num_adjuntos,
+            t.resuelto_por.nombre if t.resuelto_por else "", forma_cierre,
+            t.nota_resolucion, t.num_adjuntos,
         ]
+
         for col, valor in enumerate(valores, start=1):
             formato = formato_fecha if col in (12, 13, 14) else None
             celda = _escribir(hoja, fila, col, valor, formato)

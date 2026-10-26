@@ -5,7 +5,12 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from django.db import transaction
+
 from apps.accounts.decorators import admin_required, superadmin_required
+from apps.accounts.models import Usuario
+from apps.actividad.models import Evento
+from apps.actividad.registro import registrar as registrar_evento
 from .forms import AreaForm, CategoriaForm, PuestoForm, SucursalForm
 from .models import Area, Categoria, Puesto, Sucursal
 
@@ -152,21 +157,43 @@ def editar_sucursal(request, pk):
 @require_POST
 def eliminar_sucursal(request, pk):
     sucursal = get_object_or_404(Sucursal, pk=pk)
-    en_uso = (
-        sucursal.usuarios.count()
-        + sucursal.tickets.count()
+    bloqueos = (
+        sucursal.tickets.count()
         + sucursal.area_set.count()
         + sucursal.categoria_set.count()
         + sucursal.puesto_set.count()
     )
-    if en_uso:
+    if bloqueos:
         messages.error(
             request,
-            f"No se puede eliminar «{sucursal.nombre}»: está en uso por {en_uso} registro(s).",
+            f"No se puede eliminar «{sucursal.nombre}»: tiene {bloqueos} "
+            "ticket(s), área(s), categoría(s) o puesto(s) asociados.",
+        )
+        return redirect("lista_sucursales")
+
+    nombre = sucursal.nombre
+    with transaction.atomic():
+        a_desactivar = list(
+            sucursal.usuarios.filter(activo=True, is_superuser=False)
+            .exclude(rol=Usuario.Rol.SUPERADMIN)
+        )
+        for usuario in a_desactivar:
+            registrar_evento(
+                Evento.Tipo.USUARIO_ESTADO,
+                request.user,
+                afectado=usuario,
+                detalle=f"Cuenta desactivada por la eliminación de la sucursal «{nombre}».",
+            )
+        Usuario.objects.filter(pk__in=[u.pk for u in a_desactivar]).update(activo=False)
+        sucursal.delete()
+
+    if a_desactivar:
+        messages.success(
+            request,
+            f"Sucursal «{nombre}» eliminada. Se desactivaron {len(a_desactivar)} usuario(s).",
         )
     else:
-        sucursal.delete()
-        messages.success(request, f"Sucursal «{sucursal.nombre}» eliminada.")
+        messages.success(request, f"Sucursal «{nombre}» eliminada.")
     return redirect("lista_sucursales")
 
 @login_required

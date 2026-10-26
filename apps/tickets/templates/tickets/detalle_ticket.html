@@ -10,6 +10,7 @@
         class="badge fs-6
         {% if ticket.estado == 'ABIERTO' %}bg-primary
         {% elif ticket.estado == 'EN_PROCESO' %}bg-warning text-dark
+        {% elif ticket.estado == 'EN_ESPERA' %}bg-secondary
         {% elif ticket.estado == 'POR_CONFIRMAR' %}bg-info text-dark
         {% else %}bg-success{% endif %}"
     >
@@ -208,6 +209,62 @@
             </div>
 
         {% endif %}
+
+        {% if ticket.estado == "EN_ESPERA" %}
+            <div class="alert alert-secondary">
+                Este ticket está en espera de materiales. Soporte lo retomará en cuanto
+                los tenga; puedes escribir abajo si tienes algo que aclarar.
+            </div>
+        {% endif %}
+
+        <h5>Conversación</h5>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                {% for comentario in comentarios %}
+                    <div class="border-bottom pb-2 mb-2{% if comentario.interno %} bg-warning-subtle rounded p-2{% endif %}">
+                        <div class="d-flex justify-content-between">
+                            <strong>
+                                {{ comentario.autor.nombre }}
+                                {% if comentario.autor_id == ticket.creado_por_id %}
+                                    <span class="badge bg-secondary">Solicitante</span>
+                                {% endif %}
+                                {% if comentario.interno %}
+                                    <span class="badge bg-warning text-dark">Nota interna</span>
+                                {% endif %}
+                            </strong>
+                            <small class="text-muted">{{ comentario.creado_en|date:"d/m/Y H:i" }}</small>
+                        </div>
+                        <div>{{ comentario.contenido|linebreaksbr }}</div>
+                    </div>
+                {% empty %}
+                    <p class="text-muted mb-0">Aún no hay mensajes.</p>
+                {% endfor %}
+
+                {% if puede_comentar %}
+                    <form method="post" action="{% url 'comentar_ticket' ticket.pk %}" class="mt-3">
+                        {% csrf_token %}
+                        <textarea
+                            name="contenido"
+                            class="form-control mb-2"
+                            rows="3"
+                            maxlength="2000"
+                            required
+                            placeholder="Escribe un mensaje..."
+                        ></textarea>
+                        {% if user.es_personal %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="interno" id="interno">
+                                <label class="form-check-label small" for="interno">
+                                    Nota interna (el solicitante no la ve)
+                                </label>
+                            </div>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary btn-sm">Enviar mensaje</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
 
         <h5>Historial de actividad</h5>
 

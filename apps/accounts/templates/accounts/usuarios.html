@@ -36,8 +36,14 @@
     </thead>
     <tbody>
         {% for usuario in usuarios %}
-        <tr>
-            <td>{{ usuario.nombre }}</td>
+        <tr {% if not usuario.activo %}class="table-secondary text-muted"{% endif %}>
+            <td>
+                {% if usuario.activo %}
+                    <i class="bi bi-person-check-fill text-success me-1"></i>{{ usuario.nombre }}
+                {% else %}
+                    <i class="bi bi-person-slash me-1"></i><s>{{ usuario.nombre }}</s>
+                {% endif %}
+            </td>
             <td>{{ usuario.correo }}</td>
             <td>
                 {% if usuario.es_admin %}
@@ -51,9 +57,9 @@
             <td>{{ usuario.puesto|default:"—" }}</td>
             <td>
                 {% if usuario.activo %}
-                    <span class="badge bg-success">Activo</span>
+                    <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Activo</span>
                 {% else %}
-                    <span class="badge bg-danger">Inactivo</span>
+                    <span class="badge bg-danger"><i class="bi bi-slash-circle me-1"></i>Inactivo</span>
                 {% endif %}
             </td>
             <td>{{ usuario.creado_en|date:"d/m/Y" }}</td>

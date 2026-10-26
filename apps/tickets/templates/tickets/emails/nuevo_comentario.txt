@@ -1,0 +1,9 @@
+{% autoescape off %}Hola {{ destinatario.nombre }},
+
+{{ autor.nombre }} escribió en el ticket #{{ ticket.pk }}: {{ ticket.titulo }}
+
+{{ comentario.contenido }}
+
+Responde aquí:
+{{ url_ticket }}
+{% endautoescape %}

@@ -72,7 +72,7 @@
                 </div>
                 <h2 class="fw-bold mt-2 mb-0">{{ abiertos }}</h2>
                 <small class="text-muted d-block">Pendientes de atender</small>
-                <small class="text-muted">{{ en_proceso }} en proceso · {{ por_confirmar }} por confirmar</small>
+                <small class="text-muted">{{ en_proceso }} en proceso · {{ en_espera }} en espera · {{ por_confirmar }} por confirmar</small>
             </div>
         </div>
     </div>
@@ -251,7 +251,7 @@
             labels: datos.distribucion.labels,
             datasets: [{
                 data: datos.distribucion.data,
-                backgroundColor: ['#3b82f6', '#f97316', '#06b6d4', '#22c55e'],
+                backgroundColor: ['#3b82f6', '#f97316', '#06b6d4', '#22c55e', '#94a3b8'],
                 borderWidth: 0
             }]
         },

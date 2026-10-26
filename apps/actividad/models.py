@@ -10,6 +10,7 @@ class Evento(models.Model):
         TICKET_ESTADO = "TICKET_ESTADO", "Cambio de estado"
         TICKET_CATEGORIA = "TICKET_CATEGORIA", "Cambio de categoría"
         TICKET_RESUELTO = "TICKET_RESUELTO", "Ticket resuelto"
+        TICKET_COMENTARIO = "TICKET_COMENTARIO", "Comentario en ticket"
         CIERRE_CONFIRMADO = "CIERRE_CONFIRMADO", "Cierre confirmado"
         CIERRE_RECHAZADO = "CIERRE_RECHAZADO", "Cierre rechazado"
         CIERRE_FORZADO = "CIERRE_FORZADO", "Cierre forzado"

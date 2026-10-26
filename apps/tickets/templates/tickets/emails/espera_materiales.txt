@@ -1,0 +1,9 @@
+{% autoescape off %}{{ becario.nombre }} puso en espera de materiales el ticket #{{ ticket.pk }}: {{ ticket.titulo }}
+
+Motivo: {{ motivo }}
+
+Solicitante: {{ ticket.creado_por.nombre }} ({{ ticket.creado_por.correo }})
+
+Ábrelo aquí:
+{{ url_ticket }}
+{% endautoescape %}

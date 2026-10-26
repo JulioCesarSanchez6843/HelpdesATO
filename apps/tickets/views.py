@@ -48,11 +48,15 @@ def lista_tickets(request):
         total=Count("id"),
         abiertos=Count("id", filter=Q(estado=Ticket.Estado.ABIERTO)),
         en_proceso=Count("id", filter=Q(estado=Ticket.Estado.EN_PROCESO)),
+        en_espera=Count("id", filter=Q(estado=Ticket.Estado.EN_ESPERA)),
         por_confirmar=Count("id", filter=Q(estado=Ticket.Estado.POR_CONFIRMAR)),
         cerrados=Count("id", filter=Q(estado=Ticket.Estado.CERRADO)),
     )
     conteos["activos"] = (
-        conteos["abiertos"] + conteos["en_proceso"] + conteos["por_confirmar"]
+        conteos["abiertos"]
+        + conteos["en_proceso"]
+        + conteos["en_espera"]
+        + conteos["por_confirmar"]
     )
 
     q = request.GET.get("q", "").strip()
@@ -141,7 +145,12 @@ def detalle_ticket(request, pk):
             with transaction.atomic():
                 form_gestion.save()
                 instancia.refresh_from_db()
-                services.registrar_gestion(instancia, request.user, antes)
+                services.registrar_gestion(
+                    instancia,
+                    request.user,
+                    antes,
+                    form_gestion.cleaned_data.get("motivo_espera", ""),
+                )
 
             if instancia.estado == Ticket.Estado.POR_CONFIRMAR:
                 messages.success(
@@ -154,11 +163,18 @@ def detalle_ticket(request, pk):
 
             return redirect("detalle_ticket", pk=pk)
 
+        comentarios = ticket.comentarios.select_related("autor")
+    comentarios = ticket.comentarios.select_related("autor")
+    if not es_personal:
+        comentarios = comentarios.filter(interno=False)
+
     return render(
         request,
         "tickets/detalle_ticket.html",
         {
             "ticket": ticket,
+            "comentarios": comentarios,
+            "puede_comentar": ticket.estado != Ticket.Estado.CERRADO,
             "historial": ticket.historial.select_related("usuario"),
             "adjuntos": ticket.adjuntos.defer("contenido"),
             "form_gestion": form_gestion,
@@ -178,6 +194,23 @@ def detalle_ticket(request, pk):
         },
     )
 
+@login_required
+@require_POST
+def comentar_ticket(request, pk):
+    ticket = get_object_or_404(_tickets_visibles(request.user), pk=pk)
+    contenido = request.POST.get("contenido", "").strip()[:2000]
+    interno = request.user.es_personal and request.POST.get("interno") == "on"
+
+    if ticket.estado == Ticket.Estado.CERRADO:
+        messages.error(request, "El ticket está cerrado y ya no admite mensajes.")
+    elif len(contenido) < 2:
+        messages.error(request, "Escribe un mensaje.")
+    else:
+        with transaction.atomic():
+            services.agregar_comentario(ticket, request.user, contenido, interno)
+        messages.success(request, "Mensaje enviado.")
+
+    return redirect("detalle_ticket", pk=pk)
 
 @login_required
 def nuevo_ticket(request):

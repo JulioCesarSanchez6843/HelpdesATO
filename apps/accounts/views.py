@@ -152,6 +152,11 @@ def cambiar_estado_usuario(request, pk):
     usuario = get_object_or_404(_usuarios_gestionables(request.user), pk=pk)
     if usuario.pk == request.user.pk:
         messages.error(request, "No puedes desactivar tu propia cuenta.")
+    elif not usuario.activo and usuario.sucursal_id is None and not usuario.es_superadmin:
+        messages.error(
+            request,
+            "Este usuario no tiene sucursal. Edítalo y asígnale una antes de activarlo.",
+        )
     else:
         usuario.activo = not usuario.activo
         usuario.save(update_fields=["activo"])

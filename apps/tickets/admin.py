@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AdjuntoTicket, Historial, Notificacion, Ticket
+from .models import AdjuntoTicket, Comentario, Historial, Notificacion, Ticket
 
 
 @admin.register(Ticket)
@@ -46,5 +46,6 @@ class AdjuntoTicketAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Historial)
+admin.site.register(Comentario)
 
 admin.site.register(Notificacion)

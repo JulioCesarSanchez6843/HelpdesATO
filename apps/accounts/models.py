@@ -50,7 +50,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         related_name="usuarios"
     )
     sucursal = models.ForeignKey(
-        "catalog.Sucursal", on_delete=models.PROTECT, null=True, blank=True,
+        "catalog.Sucursal", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="usuarios"
     )
     activo = models.BooleanField(default=True)
@@ -80,6 +80,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
                     models.Q(rol="SUPERADMIN")
                     | models.Q(is_superuser=True)
                     | models.Q(sucursal__isnull=False)
+                    | models.Q(activo=False)
                 ),
                 name="usuario_sucursal_obligatoria",
             ),

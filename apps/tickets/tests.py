@@ -14,7 +14,7 @@ from django.utils import timezone
 from PIL import Image
 
 from apps.accounts.models import Usuario
-from apps.catalog.models import Area, Categoria
+from apps.catalog.models import Area, Categoria, Sucursal
 
 from . import emails
 from .email_backends import BrevoAPIEmailBackend
@@ -34,15 +34,20 @@ class BaseTicketsTest(TestCase):
     def setUp(self):
         self.area = Area.objects.create(nombre="Contabilidad")
         self.categoria = Categoria.objects.create(nombre="Red")
+        self.sucursal = Sucursal.objects.create(nombre="Central")
 
         self.admin = Usuario.objects.create_user(
-            "admin@t.com", "Admin", PASSWORD, rol=Usuario.Rol.ADMIN, area=self.area
+            "admin@t.com", "Admin", PASSWORD, rol=Usuario.Rol.SUPERADMIN, area=self.area
         )
         self.admin2 = Usuario.objects.create_user(
-            "admin2@t.com", "Admin Dos", PASSWORD, rol=Usuario.Rol.ADMIN, area=self.area
+            "admin2@t.com", "Admin Dos", PASSWORD, rol=Usuario.Rol.SUPERADMIN, area=self.area
         )
-        self.u1 = Usuario.objects.create_user("u1@t.com", "Usuario Uno", PASSWORD, area=self.area)
-        self.u2 = Usuario.objects.create_user("u2@t.com", "Usuario Dos", PASSWORD, area=self.area)
+        self.u1 = Usuario.objects.create_user(
+            "u1@t.com", "Usuario Uno", PASSWORD, area=self.area, sucursal=self.sucursal
+        )
+        self.u2 = Usuario.objects.create_user(
+            "u2@t.com", "Usuario Dos", PASSWORD, area=self.area, sucursal=self.sucursal
+        )
 
     def entrar(self, usuario):
         self.client.force_login(usuario)
@@ -126,7 +131,7 @@ class CreacionTicketTests(BaseTicketsTest):
         para_admin = next(c for c in mail.outbox if c.to == ["admin@t.com"])
         self.assertIn("Nuevo ticket", para_admin.subject)
         self.assertIn("La impresora no responde", para_admin.body)
-        self.assertIn(f"/tickets/{ticket.pk}/", para_admin.body)
+        self.assertIn("/tickets/acceso/", para_admin.body)
         para_usuario = next(c for c in mail.outbox if c.to == ["u1@t.com"])
         self.assertIn("Recibimos tu ticket", para_usuario.subject)
 
@@ -138,7 +143,9 @@ class CreacionTicketTests(BaseTicketsTest):
         self.assertTrue(pendientes)
 
     def test_usuario_sin_area_puede_crear_ticket(self):
-        sin_area = Usuario.objects.create_user("sa@t.com", "Sin Area", PASSWORD)
+        sin_area = Usuario.objects.create_user(
+            "sa@t.com", "Sin Area", PASSWORD, sucursal=self.sucursal
+        )
         self.entrar(sin_area)
         self.post(reverse("nuevo_ticket"), {"titulo": "Algo", "descripcion": "Pasa algo"})
         self.assertIsNone(Ticket.objects.get().area)
@@ -307,7 +314,7 @@ class GestionTicketsTests(BaseTicketsTest):
         self.entrar(self.admin)
         r = self.client.get(reverse("detalle_ticket", args=[ticket.pk]))
         valores = [v for v, _ in r.context["form_gestion"].fields["estado"].choices]
-        self.assertEqual(valores, ["ABIERTO", "EN_PROCESO", "POR_CONFIRMAR"])
+        self.assertEqual(valores, ["ABIERTO", "EN_PROCESO", "EN_ESPERA", "POR_CONFIRMAR"])
 
     def test_por_confirmar_exige_nota_de_resolucion(self):
         ticket = self.crear_ticket()
@@ -554,7 +561,10 @@ class ForzarCierreTests(BaseTicketsTest):
         self.resolver(ticket)
         mail.outbox.clear()
 
-        r = self.post(reverse("forzar_cierre", args=[ticket.pk]))
+        r = self.post(
+            reverse("forzar_cierre", args=[ticket.pk]),
+            {"justificacion": "El usuario no respondió en una semana"},
+        )
         self.assertRedirects(r, reverse("detalle_ticket", args=[ticket.pk]))
         ticket.refresh_from_db()
         self.assertEqual(ticket.estado, Ticket.Estado.CERRADO)
@@ -728,5 +738,110 @@ class FiltrosTests(BaseTicketsTest):
         self.assertContains(self.client.get(reverse("lista_tickets")), "Por confirmar")
         r = self.client.get(reverse("reportes"))
         self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.context["graficas"]["distribucion"]["data"], [1, 0, 1, 0])
+        self.assertEqual(r.context["graficas"]["distribucion"]["data"], [1, 0, 1, 0, 0])
+
+class ConversacionYEsperaTests(BaseTicketsTest):
+
+    def setUp(self):
+        super().setUp()
+        self.encargado = Usuario.objects.create_user(
+            "enc@t.com", "Encargado", PASSWORD, rol="ENCARGADO", sucursal=self.sucursal
+        )
+        self.becario = Usuario.objects.create_user(
+            "bec@t.com", "Becario", PASSWORD, rol="BECARIO", sucursal=self.sucursal
+        )
+        self.ticket = self.crear_ticket(autor=self.u1, sucursal=self.sucursal)
+        mail.outbox.clear()
+
+    def comentar(self, quien, contenido="Hola", **extra):
+        self.entrar(quien)
+        return self.post(
+            reverse("comentar_ticket", args=[self.ticket.pk]),
+            {"contenido": contenido, **extra},
+        )
+
+    def test_el_usuario_escribe_y_se_avisa_al_personal_de_la_sucursal(self):
+        self.comentar(self.u1, "Ya probé reiniciar")
+        self.assertEqual(self.ticket.comentarios.get().contenido, "Ya probé reiniciar")
+        self.assertEqual(
+            set(Notificacion.objects.values_list("usuario_id", flat=True)),
+            {self.admin.pk, self.admin2.pk, self.encargado.pk, self.becario.pk},
+        )
+        self.assertEqual(
+            self.destinatarios(),
+            ["admin2@t.com", "admin@t.com", "bec@t.com", "enc@t.com"],
+        )
+
+    def test_el_tecnico_responde_y_se_avisa_al_solicitante(self):
+        self.comentar(self.becario, "¿Qué modelo es el equipo?")
+        self.assertEqual(
+            list(Notificacion.objects.values_list("usuario_id", flat=True)),
+            [self.u1.pk],
+        )
+        self.assertEqual(self.destinatarios(), ["u1@t.com"])
+
+    def test_la_nota_interna_no_la_ve_el_usuario_ni_le_llega_aviso(self):
+        self.comentar(self.becario, "Nota solo para el equipo", interno="on")
+        self.assertTrue(self.ticket.comentarios.get().interno)
+        self.assertEqual(mail.outbox, [])
+        self.assertFalse(Notificacion.objects.filter(usuario=self.u1).exists())
+        self.entrar(self.u1)
+        self.assertNotContains(
+            self.client.get(reverse("detalle_ticket", args=[self.ticket.pk])),
+            "Nota solo para el equipo",
+        )
+        self.entrar(self.encargado)
+        self.assertContains(
+            self.client.get(reverse("detalle_ticket", args=[self.ticket.pk])),
+            "Nota solo para el equipo",
+        )
+
+    def test_un_usuario_no_puede_marcar_su_mensaje_como_interno(self):
+        self.comentar(self.u1, "Mensaje", interno="on")
+        self.assertFalse(self.ticket.comentarios.get().interno)
+
+    def test_no_se_comenta_en_ticket_cerrado_ni_en_ticket_ajeno(self):
+        Ticket.objects.filter(pk=self.ticket.pk).update(estado="CERRADO")
+        self.comentar(self.u1, "Tarde")
+        self.assertEqual(self.ticket.comentarios.count(), 0)
+        Ticket.objects.filter(pk=self.ticket.pk).update(estado="ABIERTO")
+        r = self.comentar(self.u2, "Intruso")
+        self.assertEqual(r.status_code, 404)
+        self.assertEqual(self.ticket.comentarios.count(), 0)
+
+    def test_poner_en_espera_exige_motivo(self):
+        self.entrar(self.becario)
+        r = self.gestionar(self.ticket, estado="EN_ESPERA", motivo_espera="  ")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("motivo_espera", r.context["form_gestion"].errors)
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.estado, Ticket.Estado.ABIERTO)
+
+    def test_becario_pone_en_espera_y_se_avisa_al_encargado(self):
+        self.entrar(self.becario)
+        self.gestionar(self.ticket, estado="EN_ESPERA", motivo_espera="Falta un cable HDMI")
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.estado, Ticket.Estado.EN_ESPERA)
+        self.assertIn("Falta un cable HDMI", self.ticket.historial.last().contenido)
+        avisos = Notificacion.objects.filter(tipo=Notificacion.Tipo.ESPERA_MATERIALES)
+        self.assertEqual(list(avisos.values_list("usuario_id", flat=True)), [self.encargado.pk])
+        self.assertEqual(self.destinatarios(), ["enc@t.com", "u1@t.com"])
+
+    def test_encargado_pone_en_espera_y_solo_queda_en_el_historial(self):
+        self.entrar(self.encargado)
+        self.gestionar(self.ticket, estado="EN_ESPERA", motivo_espera="Esperando la compra")
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.estado, Ticket.Estado.EN_ESPERA)
+        self.assertIn("Esperando la compra", self.ticket.historial.last().contenido)
+        self.assertFalse(
+            Notificacion.objects.filter(tipo=Notificacion.Tipo.ESPERA_MATERIALES).exists()
+        )
+        self.assertEqual(self.destinatarios(), ["u1@t.com"])
+
+    def test_se_puede_retomar_un_ticket_en_espera(self):
+        Ticket.objects.filter(pk=self.ticket.pk).update(estado="EN_ESPERA")
+        self.entrar(self.becario)
+        self.gestionar(self.ticket, estado="EN_PROCESO")
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.estado, Ticket.Estado.EN_PROCESO)
 

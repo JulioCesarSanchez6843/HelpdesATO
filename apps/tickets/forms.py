@@ -89,6 +89,19 @@ class TicketForm(BootstrapFormMixin, forms.ModelForm):
         }
 
 class TicketGestionForm(BootstrapFormMixin, forms.ModelForm):
+    motivo_espera = forms.CharField(
+        label="Motivo de la espera",
+        required=False,
+        max_length=1000,
+        widget=forms.Textarea(attrs={"rows": 2}),
+        help_text=(
+            "Obligatorio al elegir «En espera de materiales»: explica qué falta. "
+            "El solicitante lo verá en el historial."
+        ),
+    )
+
+    field_order = ["estado", "motivo_espera", "categoria", "numero_serie", "nota_resolucion"]
+
     class Meta:
         model = Ticket
         fields = [
@@ -135,6 +148,7 @@ class TicketGestionForm(BootstrapFormMixin, forms.ModelForm):
         permitidos = {
             Ticket.Estado.ABIERTO,
             Ticket.Estado.EN_PROCESO,
+            Ticket.Estado.EN_ESPERA,
             Ticket.Estado.POR_CONFIRMAR,
         }
         if self.estado_original == Ticket.Estado.CERRADO:
@@ -155,6 +169,18 @@ class TicketGestionForm(BootstrapFormMixin, forms.ModelForm):
                 "estado",
                 "El ticket se cierra cuando el usuario confirma. "
                 "Usa «Por confirmar» para pedirle la confirmación.",
+            )
+
+        motivo = (datos.get("motivo_espera") or "").strip()
+        datos["motivo_espera"] = motivo
+        if (
+            estado == Ticket.Estado.EN_ESPERA
+            and self.estado_original != Ticket.Estado.EN_ESPERA
+            and not motivo
+        ):
+            self.add_error(
+                "motivo_espera",
+                "Explica qué materiales faltan para poner el ticket en espera.",
             )
 
         if estado == Ticket.Estado.POR_CONFIRMAR and not nota:
