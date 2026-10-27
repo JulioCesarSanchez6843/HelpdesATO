@@ -16,8 +16,6 @@ class Command(BaseCommand):
         backend = settings.EMAIL_BACKEND
         if backend.endswith("console.EmailBackend"):
             modo = "CONSOLA (el correo solo se imprime, NO se envía de verdad)"
-        elif backend.endswith("BrevoAPIEmailBackend"):
-            modo = "API de Brevo (HTTPS) — la opción para Render gratis"
         elif backend.endswith("smtp.EmailBackend"):
             modo = f"SMTP {settings.EMAIL_HOST}:{settings.EMAIL_PORT} como {settings.EMAIL_HOST_USER}"
         else:
@@ -27,10 +25,6 @@ class Command(BaseCommand):
         self.stdout.write(f"Remitente     : {settings.DEFAULT_FROM_EMAIL}")
         self.stdout.write(f"Enlaces a     : {settings.SITE_URL}")
 
-        if backend.endswith("BrevoAPIEmailBackend") and "@localhost" in settings.DEFAULT_FROM_EMAIL:
-            self.stdout.write(self.style.WARNING(
-                "Con Brevo, DEFAULT_FROM_EMAIL debe ser un remitente verificado en tu cuenta de Brevo."
-            ))
         if not settings.DEBUG and settings.SITE_URL.startswith("http://localhost"):
             self.stdout.write(self.style.WARNING(
                 "SITE_URL apunta a localhost: los enlaces de los correos no abrirán desde otro equipo. "

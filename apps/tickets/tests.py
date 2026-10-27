@@ -17,7 +17,6 @@ from apps.accounts.models import Usuario
 from apps.catalog.models import Area, Categoria, Sucursal
 
 from . import emails
-from .email_backends import BrevoAPIEmailBackend
 from .models import AdjuntoTicket, Historial, Notificacion, Ticket
 
 
@@ -622,33 +621,6 @@ class ProbarCorreoTests(TestCase):
         with mock.patch("django.core.mail.get_connection", side_effect=OSError("sin red")):
             with self.assertRaisesMessage(CommandError, "sin red"):
                 call_command("probar_correo", "destino@t.com", stdout=StringIO())
-
-
-class BrevoBackendTests(TestCase):
-
-    @override_settings(BREVO_API_KEY="clave-secreta", EMAIL_TIMEOUT=5)
-    def test_envia_a_la_api_de_brevo_con_el_formato_correcto(self):
-        mensaje = mail.EmailMessage("Asunto", "Cuerpo", "Helpdesk <soporte@empresa.com>", ["a@t.com"])
-        with mock.patch("apps.tickets.email_backends.urlopen") as urlopen:
-            enviados = BrevoAPIEmailBackend().send_messages([mensaje])
-
-        self.assertEqual(enviados, 1)
-        peticion = urlopen.call_args.args[0]
-        self.assertEqual(peticion.full_url, "https://api.brevo.com/v3/smtp/email")
-        self.assertEqual(peticion.get_header("Api-key"), "clave-secreta")
-        datos = json.loads(peticion.data)
-        self.assertEqual(datos["sender"], {"email": "soporte@empresa.com", "name": "Helpdesk"})
-        self.assertEqual(datos["to"], [{"email": "a@t.com"}])
-        self.assertEqual(datos["subject"], "Asunto")
-        self.assertEqual(datos["textContent"], "Cuerpo")
-
-    def test_con_fail_silently_no_lanza_error(self):
-        mensaje = mail.EmailMessage("A", "B", "x@t.com", ["a@t.com"])
-        with mock.patch("apps.tickets.email_backends.urlopen", side_effect=OSError("caído")):
-            self.assertEqual(BrevoAPIEmailBackend(fail_silently=True).send_messages([mensaje]), 0)
-            with self.assertRaises(OSError):
-                BrevoAPIEmailBackend().send_messages([mensaje])
-
 
 class NotificacionesTests(BaseTicketsTest):
 

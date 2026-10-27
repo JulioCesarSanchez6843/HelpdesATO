@@ -1,5 +1,4 @@
 from pathlib import Path
-import dj_database_url
 from decouple import config, Csv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -67,10 +66,6 @@ DATABASES = {
     }
 }
 
-_database_url = config("DATABASE_URL", default="")
-if _database_url:
-    DATABASES["default"] = dj_database_url.parse(_database_url, conn_max_age=600)
-
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -97,7 +92,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "lista_tickets"
 
-BREVO_API_KEY = config("BREVO_API_KEY", default="")
 EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
 EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
@@ -106,21 +100,18 @@ EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 EMAIL_TIMEOUT = 10
 
-if BREVO_API_KEY:
-    _backend_por_defecto = "apps.tickets.email_backends.BrevoAPIEmailBackend"
-elif EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
     _backend_por_defecto = "django.core.mail.backends.smtp.EmailBackend"
 else:
     _backend_por_defecto = "django.core.mail.backends.console.EmailBackend"
+
 EMAIL_BACKEND = config("EMAIL_BACKEND", default=_backend_por_defecto)
 
 DEFAULT_FROM_EMAIL = config(
     "DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER or "Helpdesk <helpdesk@localhost>"
 )
 
-SITE_URL = config(
-    "SITE_URL", default=config("RENDER_EXTERNAL_URL", default="http://localhost:8000")
-).rstrip("/")
+SITE_URL = config("SITE_URL", default="http://localhost:8000").rstrip("/")
 
 CIERRE_TOKEN_MAX_AGE = 60 * 60 * 24 * config("CIERRE_TOKEN_DIAS", default=7, cast=int)
 PASSWORD_RESET_TIMEOUT = 60 * 60
