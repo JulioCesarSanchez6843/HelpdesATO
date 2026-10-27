@@ -76,6 +76,7 @@ class Ticket(models.Model):
     creado_en = models.DateTimeField(auto_now_add=True)
     resuelto_en = models.DateTimeField(null=True, blank=True)
     cerrado_en = models.DateTimeField(null=True, blank=True)
+    recordatorio_cierre_en = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-creado_en"]
@@ -229,3 +230,37 @@ class Comentario(models.Model):
 
     def __str__(self):
         return f"Comentario de {self.autor} en ticket #{self.ticket_id}"
+
+class ConfiguracionSistema(models.Model):
+    cierre_automatico_activo = models.BooleanField(default=False)
+    cierre_automatico_dias = models.PositiveSmallIntegerField(default=7)
+    recordatorio_activo = models.BooleanField(default=True)
+    recordatorio_dias_antes = models.PositiveSmallIntegerField(default=2)
+    ultima_ejecucion = models.DateTimeField(null=True, blank=True)
+    ultima_ejecucion_cerrados = models.PositiveIntegerField(default=0)
+    ultima_ejecucion_recordatorios = models.PositiveIntegerField(default=0)
+    ultima_ejecucion_errores = models.PositiveIntegerField(default=0)
+    actualizado_en = models.DateTimeField(null=True, blank=True)
+    actualizado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+
+    class Meta:
+        verbose_name = "Configuración del sistema"
+        verbose_name_plural = "Configuración del sistema"
+
+    def __str__(self):
+        return "Configuración del sistema"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def actual(cls):
+        configuracion, _ = cls.objects.get_or_create(pk=1)
+        return configuracion

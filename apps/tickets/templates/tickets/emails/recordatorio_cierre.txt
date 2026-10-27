@@ -1,0 +1,12 @@
+{% autoescape off %}Hola {{ ticket.creado_por.nombre }},
+
+Tu ticket sigue esperando tu confirmación y se cerrará automáticamente el {{ cierra_el|date:"d/m/Y" }} si no respondes.
+
+Ticket #{{ ticket.pk }}: {{ ticket.titulo }}
+
+Nota de resolución:
+{{ ticket.nota_resolucion }}
+
+Confirma si quedó solucionado (o dinos que no) en este enlace:
+{{ url_confirmacion }}
+{% endautoescape %}

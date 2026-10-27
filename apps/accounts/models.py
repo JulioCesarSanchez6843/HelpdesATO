@@ -220,6 +220,7 @@ _CAMPO_CORREO = {
     "cierre_confirmado_admin": "correo_cierres",
     "cierre_rechazado_admin": "correo_cierres",
     "cierre_forzado": "correo_cierres",
+    "cierre_automatico": "correo_cierres",
 }
 
 

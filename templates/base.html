@@ -63,7 +63,10 @@
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li><a class="dropdown-item" href="{% url 'mi_perfil' %}"><i class="bi bi-person-gear me-2"></i>Mi perfil</a></li>
-                    <li><a class="dropdown-item" href="{% url 'ajustes' %}"><i class="bi bi-sliders me-2"></i>Ajustes</a></li>
+                    <li><a class="dropdown-item" href="{% url 'ajustes' %}"><i class="bi bi-gear me-2"></i>Ajustes</a></li>
+                    {% if user.es_superadmin %}
+                    <li><a class="dropdown-item" href="{% url 'configuracion_sistema' %}"><i class="bi bi-sliders me-2"></i>Parámetros del sistema</a></li>
+                    {% endif %}
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <form method="post" action="{% url 'logout' %}">

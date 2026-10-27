@@ -5,7 +5,7 @@ from django.utils import timezone
 from apps.accounts.forms import BootstrapFormMixin
 from apps.accounts.models import Usuario
 from apps.catalog.models import Categoria
-from .models import Ticket
+from .models import ConfiguracionSistema, Ticket
 
 
 class MultipleFileInput(forms.FileInput):
@@ -230,3 +230,54 @@ class AsignarTicketForm(BootstrapFormMixin, forms.Form):
         )
         campo.initial = ticket.asignado_a_id
         campo.label_from_instance = lambda u: f"{u.nombre} ({u.get_rol_display()})"
+
+class ConfiguracionSistemaForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = ConfiguracionSistema
+        fields = [
+            "cierre_automatico_activo",
+            "cierre_automatico_dias",
+            "recordatorio_activo",
+            "recordatorio_dias_antes",
+        ]
+        labels = {
+            "cierre_automatico_activo": "Cerrar automáticamente los tickets sin respuesta",
+            "cierre_automatico_dias": "Días en «Por confirmar» antes de cerrar",
+            "recordatorio_activo": "Avisar al usuario antes de cerrar",
+            "recordatorio_dias_antes": "Días antes del cierre para avisar",
+        }
+        widgets = {
+            "cierre_automatico_dias": forms.NumberInput(attrs={"min": 1, "max": 90}),
+            "recordatorio_dias_antes": forms.NumberInput(attrs={"min": 1, "max": 30}),
+        }
+
+    def clean(self):
+        datos = super().clean()
+        dias = datos.get("cierre_automatico_dias")
+        antes = datos.get("recordatorio_dias_antes")
+
+        if dias is not None:
+            minimo = max(1, -(-settings.CIERRE_TOKEN_MAX_AGE // 86400))
+            if dias > 90:
+                self.add_error("cierre_automatico_dias", "No puede ser mayor a 90 días.")
+            elif dias < minimo:
+                self.add_error(
+                    "cierre_automatico_dias",
+                    f"Debe ser de al menos {minimo} días, que es lo que dura el enlace de confirmación del correo.",
+                )
+
+        if antes is not None:
+            if antes < 1 or antes > 30:
+                self.add_error(
+                    "recordatorio_dias_antes", "Debe estar entre 1 y 30 días."
+                )
+            elif (
+                dias is not None
+                and datos.get("recordatorio_activo")
+                and antes >= dias
+            ):
+                self.add_error(
+                    "recordatorio_dias_antes",
+                    "Debe ser menor que los días para cerrar.",
+                )
+        return datos

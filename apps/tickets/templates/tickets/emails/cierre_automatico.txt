@@ -1,0 +1,12 @@
+{% autoescape off %}Hola {{ destinatario.nombre }},
+
+El ticket #{{ ticket.pk }} se cerró automáticamente porque pasaron {{ dias }} días en «Por confirmar» sin respuesta del usuario.
+
+Ticket #{{ ticket.pk }}: {{ ticket.titulo }}
+
+Nota de resolución:
+{{ ticket.nota_resolucion }}
+
+Si el problema sigue, crea un ticket nuevo desde:
+{{ url_ticket }}
+{% endautoescape %}

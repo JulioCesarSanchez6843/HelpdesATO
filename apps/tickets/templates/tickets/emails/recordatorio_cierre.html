@@ -1,0 +1,20 @@
+{% extends "tickets/emails/_base.html" %}
+
+{% block contenido %}
+<p style="margin:0 0 12px;">Hola {{ ticket.creado_por.nombre }},</p>
+<p style="margin:0 0 12px;">Tu ticket sigue esperando tu confirmación y se <strong>cerrará automáticamente el {{ cierra_el|date:"d/m/Y" }}</strong> si no respondes.</p>
+
+{% include "tickets/emails/_detalle.html" %}
+
+{% if ticket.nota_resolucion %}
+<p style="margin:16px 0 4px;font-weight:bold;">Nota de resolución</p>
+<div style="background:#e8f5ee;border-left:4px solid #198754;padding:12px 16px;margin:0 0 16px;">{{ ticket.nota_resolucion|linebreaksbr }}</div>
+{% endif %}
+
+<p style="margin:0 0 16px;">Si tu problema quedó solucionado, presiona el botón verde. Si no, dinos que no se resolvió y lo reabrimos.</p>
+
+<p style="margin:0 0 16px;">
+{% include "tickets/emails/_boton.html" with url=url_confirmacion texto="Sí, se resolvió — cerrar ticket" fondo="#198754" color="#ffffff" %}
+{% include "tickets/emails/_boton.html" with url=url_confirmacion texto="No se resolvió" fondo="#ffffff" color="#dc3545" borde="#dc3545" %}
+</p>
+{% endblock %}

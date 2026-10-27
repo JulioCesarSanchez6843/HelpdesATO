@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import views, views_configuracion
 
 
 urlpatterns = [
@@ -34,6 +34,12 @@ urlpatterns = [
         "notificaciones/<int:pk>/leer/",
         views.marcar_notificacion_leida,
         name="marcar_notificacion_leida",
+    ),
+
+    path(
+        "configuracion/",
+        views_configuracion.configuracion_sistema,
+        name="configuracion_sistema",
     ),
 
     path("<int:pk>/", views.detalle_ticket, name="detalle_ticket"),

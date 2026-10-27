@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block content %}
+<h3 class="mb-1">Parámetros del sistema</h3>
+<p class="text-muted">Controla cuándo se cierran solos los tickets que llevan días en «Por confirmar».</p>
+
+{% if sin_ejecutar %}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle me-1"></i>
+    El cierre automático está activado, pero el proceso no se ha ejecutado en las últimas {{ horas_sin_ejecutar }} horas{% if not configuracion.ultima_ejecucion %} (todavía no se ha ejecutado nunca){% endif %}. Revisa que el cron esté funcionando.
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <form method="post">
+            {% csrf_token %}
+            {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <h6 class="card-title">Cierre automático</h6>
+                    <div class="form-check form-switch mb-3">
+                        {{ form.cierre_automatico_activo }}
+                        <label class="form-check-label" for="{{ form.cierre_automatico_activo.id_for_label }}">{{ form.cierre_automatico_activo.label }}</label>
+                    </div>
+                    <label for="{{ form.cierre_automatico_dias.id_for_label }}" class="form-label">{{ form.cierre_automatico_dias.label }}</label>
+                    {{ form.cierre_automatico_dias }}
+                    <div class="form-text">El enlace de confirmación del correo dura {{ vigencia_enlace_dias }} días, así que este valor no puede ser menor.</div>
+                    {% for error in form.cierre_automatico_dias.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <h6 class="card-title">Recordatorio previo</h6>
+                    <div class="form-check form-switch mb-3">
+                        {{ form.recordatorio_activo }}
+                        <label class="form-check-label" for="{{ form.recordatorio_activo.id_for_label }}">{{ form.recordatorio_activo.label }}</label>
+                    </div>
+                    <label for="{{ form.recordatorio_dias_antes.id_for_label }}" class="form-label">{{ form.recordatorio_dias_antes.label }}</label>
+                    {{ form.recordatorio_dias_antes }}
+                    <div class="form-text">Se manda un correo y una notificación al usuario con el enlace para confirmar o rechazar.</div>
+                    {% for error in form.recordatorio_dias_antes.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Guardar</button>
+        </form>
+
+        {% if configuracion.actualizado_en %}
+        <p class="text-muted small mt-3 mb-0">
+            Última modificación: {{ configuracion.actualizado_en|date:"d/m/Y H:i" }}{% if configuracion.actualizado_por %} por {{ configuracion.actualizado_por.nombre }}{% endif %}.
+        </p>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title">Última ejecución</h6>
+                {% if configuracion.ultima_ejecucion %}
+                <div class="row text-center g-2">
+                    <div class="col-12 text-start text-muted small">{{ configuracion.ultima_ejecucion|date:"d/m/Y H:i" }}</div>
+                    <div class="col-4"><div class="fs-4 fw-bold">{{ configuracion.ultima_ejecucion_cerrados }}</div><div class="text-muted small">Cerrados</div></div>
+                    <div class="col-4"><div class="fs-4 fw-bold">{{ configuracion.ultima_ejecucion_recordatorios }}</div><div class="text-muted small">Avisos enviados</div></div>
+                    <div class="col-4"><div class="fs-4 fw-bold {% if configuracion.ultima_ejecucion_errores %}text-danger{% endif %}">{{ configuracion.ultima_ejecucion_errores }}</div><div class="text-muted small">Errores</div></div>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">Todavía no se ha ejecutado.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title">Tickets en «Por confirmar» ({{ total_por_confirmar }})</h6>
+                {% if pendientes %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Ticket</th>
+                                <th>Usuario</th>
+                                <th>Días</th>
+                                <th>Cierre</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fila in pendientes %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'detalle_ticket' fila.ticket.pk %}">#{{ fila.ticket.pk }}</a>
+                                    <span class="text-muted small">{{ fila.ticket.titulo|truncatechars:30 }}</span>
+                                </td>
+                                <td class="small">{{ fila.ticket.creado_por.nombre }}</td>
+                                <td>{{ fila.dias }}</td>
+                                <td class="small">
+                                    {% if not configuracion.cierre_automatico_activo %}
+                                    <span class="text-muted">—</span>
+                                    {% elif fila.vencido %}
+                                    <span class="badge bg-danger-subtle text-danger-emphasis">Próxima ejecución</span>
+                                    {% else %}
+                                    {{ fila.cierra_el|date:"d/m/Y" }}
+                                    {% if fila.avisado %}<i class="bi bi-envelope-check text-success ms-1" title="Aviso enviado"></i>{% endif %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if total_por_confirmar > pendientes|length %}
+                <p class="text-muted small mt-2 mb-0">Se muestran los {{ pendientes|length }} más antiguos.</p>
+                {% endif %}
+                {% else %}
+                <p class="text-muted mb-0">No hay tickets esperando confirmación.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

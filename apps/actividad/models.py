@@ -20,6 +20,8 @@ class Evento(models.Model):
         USUARIO_CREADO = "USUARIO_CREADO", "Usuario creado"
         USUARIO_ESTADO = "USUARIO_ESTADO", "Usuario activado o desactivado"
         ROL_CAMBIADO = "ROL_CAMBIADO", "Rol cambiado"
+        CONFIG_CAMBIADA = "CONFIG_CAMBIADA", "Configuración cambiada"
+
 
     tipo = models.CharField(max_length=24, choices=Tipo.choices)
     actor = models.ForeignKey(

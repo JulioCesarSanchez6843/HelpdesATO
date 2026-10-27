@@ -446,7 +446,62 @@ def forzar_cierre(ticket, admin, justificacion):
         )
     )
 
-def tomar_ticket(ticket, actor):
+def cerrar_automaticamente(ticket, dias):
+    justificacion = (
+        f"Cierre automático: el ticket permaneció {dias} días "
+        "en «Por confirmar» sin respuesta del usuario."
+    )
+    ticket.estado = Ticket.Estado.CERRADO
+    ticket.cerrado_en = timezone.now()
+    ticket.justificacion_cierre = justificacion
+    ticket.save(update_fields=["estado", "cerrado_en", "justificacion_cierre"])
+
+    Historial.objects.create(
+        ticket=ticket,
+        usuario=ticket.resuelto_por or ticket.creado_por,
+        tipo=Historial.Tipo.CAMBIO_ESTADO,
+        contenido=(
+            "Estado cambiado de «Por confirmar» a «Cerrado». "
+            "Cerrado automáticamente por el sistema. "
+            f"Justificación: {justificacion}"
+        ),
+    )
+    registrar_evento(
+        Evento.Tipo.CIERRE_FORZADO,
+        None,
+        ticket=ticket,
+        afectado=ticket.resuelto_por,
+        detalle=justificacion,
+    )
+
+    destinatarios = {
+        usuario.pk: usuario
+        for usuario in [ticket.creado_por, *_admins_activos(ticket)]
+        if usuario.activo
+    }
+    Notificacion.objects.bulk_create(
+        [
+            Notificacion(
+                usuario=usuario,
+                ticket=ticket,
+                tipo=Notificacion.Tipo.TICKET_CERRADO,
+                mensaje=(
+                    f"El ticket #{ticket.pk} se cerró automáticamente "
+                    "por falta de confirmación."
+                ),
+            )
+            for usuario in destinatarios.values()
+        ]
+    )
+    emails.enviar_tras_commit(
+        emails.construir(
+            list(destinatarios.values()),
+            f"Ticket #{ticket.pk} cerrado automáticamente",
+            "cierre_automatico",
+            _contexto(ticket, dias=dias),
+            contexto_usuario=lambda destinatario: {"destinatario": destinatario},
+        )
+    )
     antes = snapshot(ticket)
     ticket.asignado_a = actor
     campos = ["asignado_a"]
@@ -478,6 +533,34 @@ def tomar_ticket(ticket, actor):
             ticket,
             actor,
         )
+def enviar_recordatorio_cierre(ticket, cierra_el):
+    ticket.recordatorio_cierre_en = timezone.now()
+    ticket.save(update_fields=["recordatorio_cierre_en"])
+
+    if ticket.creado_por.activo:
+        fecha = timezone.localtime(cierra_el).strftime("%d/%m/%Y")
+        Notificacion.objects.create(
+            usuario=ticket.creado_por,
+            ticket=ticket,
+            tipo=Notificacion.Tipo.POR_CONFIRMAR,
+            mensaje=(
+                f"Tu ticket #{ticket.pk} se cerrará automáticamente el {fecha} "
+                "si no confirmas que quedó resuelto."
+            ),
+        )
+
+    emails.enviar_tras_commit(
+        emails.construir(
+            [ticket.creado_por],
+            f"Ticket #{ticket.pk}: confirma antes de que se cierre",
+            "recordatorio_cierre",
+            _contexto(
+                ticket,
+                url_confirmacion=_url_confirmacion(ticket),
+                cierra_el=cierra_el,
+            ),
+        )
+    )
 
 
 def asignar_ticket(ticket, actor, destino):
