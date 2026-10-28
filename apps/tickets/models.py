@@ -266,3 +266,30 @@ class ConfiguracionSistema(models.Model):
     def actual(cls):
         configuracion, _ = cls.objects.get_or_create(pk=1)
         return configuracion
+
+class CorreoPendiente(models.Model):
+    class Estado(models.TextChoices):
+        PENDIENTE = "PENDIENTE", "Pendiente"
+        ENVIADO = "ENVIADO", "Enviado"
+        ERROR = "ERROR", "Error"
+
+    destinatarios = models.CharField(max_length=500)
+    asunto = models.CharField(max_length=250)
+    contenido = models.BinaryField()
+    estado = models.CharField(
+        max_length=10, choices=Estado.choices, default=Estado.PENDIENTE
+    )
+    intentos = models.PositiveSmallIntegerField(default=0)
+    error = models.CharField(max_length=500, blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    proximo_intento = models.DateTimeField(default=timezone.now)
+    enviado_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["id"]
+        verbose_name = "Correo pendiente"
+        verbose_name_plural = "Cola de correos"
+        indexes = [models.Index(fields=["estado", "proximo_intento"])]
+
+    def __str__(self):
+        return f"{self.asunto} → {self.destinatarios} ({self.get_estado_display()})"

@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .models import AdjuntoTicket, Comentario, Historial, Notificacion, Ticket
+from .models import CorreoPendiente
 
 
 @admin.register(Ticket)
@@ -49,3 +50,10 @@ admin.site.register(Historial)
 admin.site.register(Comentario)
 
 admin.site.register(Notificacion)
+
+@admin.register(CorreoPendiente)
+class CorreoPendienteAdmin(admin.ModelAdmin):
+    list_display = ("asunto", "destinatarios", "estado", "intentos", "creado_en", "enviado_en")
+    list_filter = ("estado",)
+    search_fields = ("asunto", "destinatarios")
+    readonly_fields = ("contenido",)
