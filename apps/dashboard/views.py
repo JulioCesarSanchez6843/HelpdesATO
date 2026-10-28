@@ -17,10 +17,14 @@ from apps.accounts.decorators import admin_required
 from apps.accounts.models import Usuario
 from apps.tickets.models import Ticket
 
-DURACION_CIERRE = ExpressionWrapper(
-    F("cerrado_en") - F("creado_en"), output_field=DurationField()
+DURACION_RESOLUCION = ExpressionWrapper(
+    F("resuelto_en") - F("creado_en"), output_field=DurationField()
 )
-FILTRO_CERRADOS_CON_FECHA = Q(estado=Ticket.Estado.CERRADO, cerrado_en__isnull=False)
+DURACION_PRIMERA_RESPUESTA = ExpressionWrapper(
+    F("primera_respuesta_en") - F("creado_en"), output_field=DurationField()
+)
+FILTRO_CON_RESOLUCION = Q(resuelto_en__isnull=False)
+FILTRO_CON_PRIMERA_RESPUESTA = Q(primera_respuesta_en__isnull=False)
 MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
 
 
@@ -50,7 +54,10 @@ def _resumen_por(tickets, campo, sin_valor):
         .annotate(
             total=Count("id"),
             cerrados=Count("id", filter=Q(estado=Ticket.Estado.CERRADO)),
-            promedio=Avg(DURACION_CIERRE, filter=FILTRO_CERRADOS_CON_FECHA),
+            promedio=Avg(DURACION_RESOLUCION, filter=FILTRO_CON_RESOLUCION),
+            promedio_respuesta=Avg(
+                DURACION_PRIMERA_RESPUESTA, filter=FILTRO_CON_PRIMERA_RESPUESTA
+            ),
         )
         .order_by("-total", campo)
     )
@@ -64,6 +71,7 @@ def _resumen_por(tickets, campo, sin_valor):
             "cerrados": cerrados,
             "porcentaje": round(cerrados / total * 100) if total else 0,
             "horas": _horas(fila["promedio"]),
+            "horas_respuesta": _horas(fila["promedio_respuesta"]),
         })
     return resultado
 
@@ -94,10 +102,14 @@ def reportes(request):
     por_confirmar = tickets.filter(estado=Ticket.Estado.POR_CONFIRMAR).count()
     cerrados = tickets.filter(estado=Ticket.Estado.CERRADO).count()
 
-    promedio = tickets.filter(FILTRO_CERRADOS_CON_FECHA).aggregate(
-        promedio=Avg(DURACION_CIERRE)
-    )["promedio"]
-    tiempo_promedio_horas = _horas(promedio)
+    tiempos = tickets.aggregate(
+        resolucion=Avg(DURACION_RESOLUCION, filter=FILTRO_CON_RESOLUCION),
+        respuesta=Avg(
+            DURACION_PRIMERA_RESPUESTA, filter=FILTRO_CON_PRIMERA_RESPUESTA
+        ),
+    )
+    tiempo_promedio_horas = _horas(tiempos["resolucion"])
+    tiempo_respuesta_horas = _horas(tiempos["respuesta"])
 
     porcentaje_resueltos = round((cerrados / total) * 100) if total else 0
 
@@ -184,6 +196,7 @@ def reportes(request):
         "por_confirmar": por_confirmar,
         "cerrados": cerrados,
         "tiempo_promedio_horas": tiempo_promedio_horas,
+        "tiempo_respuesta_horas": tiempo_respuesta_horas,
         "porcentaje_resueltos": porcentaje_resueltos,
         "graficas": graficas,
         "por_categoria": por_categoria,
@@ -275,8 +288,8 @@ def exportar_resueltos(request):
             round((t.cerrado_en - t.creado_en).total_seconds() / 3600, 1)
             if t.cerrado_en else None
         )
-        if horas_cierre is not None:
-            suma_horas += horas_cierre
+        if horas_resolver is not None:
+            suma_horas += horas_resolver
             con_horas += 1
 
         if t.justificacion_cierre:
@@ -327,7 +340,7 @@ def exportar_resueltos(request):
     resumen.append(["Cierre hasta", hasta.isoformat() if hasta else "Sin límite"])
     resumen.append(["Total de tickets", total])
     resumen.append([
-        "Horas promedio hasta el cierre",
+        "Horas promedio hasta resolver",
         round(suma_horas / con_horas, 1) if con_horas else "—",
     ])
     for titulo, datos in (

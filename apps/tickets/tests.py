@@ -83,9 +83,9 @@ class BaseTicketsTest(TestCase):
 
     def url_del_correo(self):
         for correo in mail.outbox:
-            encontrada = re.search(r"https?://[^\s]+/tickets/confirmar/[^\s]+/", correo.body)
+            encontrada = re.search(r"https?://[^/\s]+(/tickets/confirmar/[^\s]+/)", correo.body)
             if encontrada:
-                return encontrada.group(0).replace("http://localhost:8000", "")
+                return encontrada.group(1)
         self.fail("No se envió el correo con el enlace de confirmación.")
 
     def destinatarios(self):

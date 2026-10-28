@@ -69,11 +69,12 @@ class Ticket(models.Model):
 
     creado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="tickets_creados",
     )
 
     creado_en = models.DateTimeField(auto_now_add=True)
+    primera_respuesta_en = models.DateTimeField(null=True, blank=True)
     resuelto_en = models.DateTimeField(null=True, blank=True)
     cerrado_en = models.DateTimeField(null=True, blank=True)
     recordatorio_cierre_en = models.DateTimeField(null=True, blank=True)
@@ -101,9 +102,10 @@ class AdjuntoTicket(models.Model):
     tamano = models.PositiveIntegerField(default=0)
     subido_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="+",
     )
+
     subido_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -130,7 +132,7 @@ class Historial(models.Model):
 
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
     )
 
     tipo = models.CharField(

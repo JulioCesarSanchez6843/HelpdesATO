@@ -80,13 +80,16 @@
         <div class="card shadow-sm h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start">
-                    <small class="text-muted text-uppercase">Tiempo promedio</small>
+                    <small class="text-muted text-uppercase">Tiempo de resolución</small>
                     <span class="bg-light rounded p-2">🕐</span>
                 </div>
                 <h2 class="fw-bold mt-2 mb-0">
                     {% if tiempo_promedio_horas is not None %}{{ tiempo_promedio_horas }} h{% else %}—{% endif %}
                 </h2>
-                <small class="text-muted">Por ticket cerrado</small>
+                <small class="text-muted d-block">Hasta marcarlo «Por confirmar»</small>
+                <small class="text-muted d-block">
+                    1ª respuesta: {% if tiempo_respuesta_horas is not None %}{{ tiempo_respuesta_horas }} h{% else %}—{% endif %}
+                </small>
             </div>
         </div>
     </div>

@@ -1,5 +1,3 @@
-from urllib import request
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -135,14 +133,14 @@ def detalle_ticket(request, pk):
         if not es_personal:
             raise PermissionDenied
 
-        antes = services.snapshot(ticket)
+        guardado = False
 
-        instancia = Ticket.objects.get(pk=ticket.pk)
+        with transaction.atomic():
+            instancia = Ticket.objects.select_for_update().get(pk=ticket.pk)
+            antes = services.snapshot(instancia)
+            form_gestion = TicketGestionForm(request.POST, instance=instancia)
 
-        form_gestion = TicketGestionForm(request.POST, instance=instancia)
-
-        if form_gestion.is_valid():
-            with transaction.atomic():
+            if form_gestion.is_valid():
                 form_gestion.save()
                 instancia.refresh_from_db()
                 services.registrar_gestion(
@@ -151,7 +149,9 @@ def detalle_ticket(request, pk):
                     antes,
                     form_gestion.cleaned_data.get("motivo_espera", ""),
                 )
+                guardado = True
 
+        if guardado:
             if instancia.estado == Ticket.Estado.POR_CONFIRMAR:
                 messages.success(
                     request,

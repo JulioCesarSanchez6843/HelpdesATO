@@ -209,7 +209,17 @@ def mi_perfil(request):
             return redirect("mi_perfil")
     else:
         form = FotoPerfilForm()
-    return render(request, "accounts/perfil.html", {"form": form})
+    logos_sucursales = []
+    if request.user.es_superadmin:
+        logos_sucursales = list(
+            Sucursal.objects.defer("logo").filter(
+                activa=True, logo_actualizado_en__isnull=False
+            )
+        )
+    return render(request, "accounts/perfil.html", {
+        "form": form,
+        "logos_sucursales": logos_sucursales,
+    })
 
 @login_required
 def ajustes(request):
@@ -248,6 +258,7 @@ def cambiar_password(request):
     if request.method == "POST":
         form = CambiarPasswordForm(request.user, request.POST)
         if form.is_valid():
+            era_obligatorio = request.user.debe_cambiar_password
             usuario = form.save()
             usuario.debe_cambiar_password = False
             usuario.save(update_fields=["debe_cambiar_password"])
@@ -259,7 +270,7 @@ def cambiar_password(request):
                 detalle="Cambió su propia contraseña.",
             )
             messages.success(request, "Contraseña actualizada.")
-            return redirect("lista_tickets")
+            return redirect("mi_perfil" if era_obligatorio else "lista_tickets")
     else:
         form = CambiarPasswordForm(request.user)
     return render(request, "accounts/cambiar_password.html", {"form": form})
@@ -310,7 +321,7 @@ def _enviar_enlace_recuperacion(usuario):
             "url_restablecer": url,
             "horas": settings.PASSWORD_RESET_TIMEOUT // 3600,
         },
-        carpeta="accounts/emails",
+        carpeta="emails",
     )
     correos.enviar_tras_commit(mensajes)
 

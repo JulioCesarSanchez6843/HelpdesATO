@@ -1,11 +1,25 @@
 {% extends "base.html" %}
+{% load static %}
 {% block content %}
 <h3 class="mb-3">Mi perfil</h3>
 
 <div class="row g-4">
-    <div class="col-lg-4">
+    <div class="col-md-5 col-xl-4">
         <div class="card perfil-tarjeta shadow-sm">
-            <div class="perfil-portada"></div>
+            <div class="perfil-portada">
+                <div class="perfil-marca perfil-marca-izq">
+                    {% if sucursal_actual %}
+                    {% if sucursal_actual.logo_actualizado_en %}
+                    <img src="{% url 'logo_sucursal' sucursal_actual.pk %}?v={{ sucursal_actual.logo_actualizado_en|date:'U' }}" alt="{{ sucursal_actual.nombre }}">
+                    {% else %}
+                    <span class="perfil-marca-texto">{{ sucursal_actual.nombre }}</span>
+                    {% endif %}
+                    {% endif %}
+                </div>
+                <div class="perfil-marca perfil-marca-der">
+                    <img src="{% static 'img/favicon_tollocan.png' %}" alt="Grupo Tollocan">
+                </div>
+            </div>
             <div class="card-body text-center perfil-cuerpo">
                 <form method="post" enctype="multipart/form-data" id="formFoto">
                     {% csrf_token %}
@@ -13,7 +27,7 @@
                         {% if foto_version %}
                         <img src="{% url 'foto_usuario' user.pk %}?v={{ foto_version }}" alt="Foto de perfil" class="avatar-perfil">
                         {% else %}
-                        <i class="bi bi-person-circle avatar-vacio"></i>
+                        <span class="avatar-iniciales">{{ user.nombre|slice:":1"|upper }}</span>
                         {% endif %}
                         <span class="avatar-camara"><i class="bi bi-camera-fill"></i></span>
                     </label>
@@ -26,28 +40,32 @@
 
                 <h4 class="mt-3 mb-1">{{ user.nombre }}</h4>
                 <p class="text-muted mb-2">{{ user.correo }}</p>
-                <span class="badge bg-primary">{{ user.get_rol_display }}</span>
-                {% if not user.es_maestro %}
-                <form method="post" action="{% url 'solicitar_cambio_password' %}" class="mt-3">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-key me-1"></i>Solicitar cambio de contraseña</button>
-                </form>
+                <span class="perfil-rol"><i class="bi bi-shield-check"></i>{{ user.get_rol_display }}</span>
+
+                {% if not user.es_maestro or foto_version %}
+                <div class="perfil-acciones">
+                    {% if not user.es_maestro %}
+                    <form method="post" action="{% url 'solicitar_cambio_password' %}" class="m-0">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-key me-1"></i>Cambiar contraseña</button>
+                    </form>
+                    {% endif %}
+                    {% if foto_version %}
+                    <form method="post" class="m-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="eliminar">
+                        <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash me-1"></i>Quitar foto</button>
+                    </form>
+                    {% endif %}
+                </div>
                 {% endif %}
 
-                <p class="form-text mt-3 mb-0">Haz clic en tu foto para cambiarla. JPG o PNG, máximo 5 MB.</p>
-
-                {% if foto_version %}
-                <form method="post" class="mt-3">
-                    {% csrf_token %}
-                    <input type="hidden" name="accion" value="eliminar">
-                    <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash me-1"></i>Quitar foto</button>
-                </form>
-                {% endif %}
+                <p class="perfil-ayuda"><i class="bi bi-info-circle me-1"></i>Toca tu foto para cambiarla · JPG o PNG, máx. 5 MB</p>
             </div>
         </div>
     </div>
 
-    <div class="col-lg-8">
+    <div class="col-md-7 col-xl-8">
         <div class="card perfil-tarjeta shadow-sm">
             <div class="card-body p-4">
                 <h5 class="mb-4"><i class="bi bi-person-vcard text-primary me-2"></i>Información de la cuenta</h5>
@@ -70,6 +88,17 @@
                             </div>
                         </div>
                     </div>
+                    {% if not user.es_superadmin %}
+                    <div class="col-md-6">
+                        <div class="perfil-dato">
+                            <div class="perfil-dato-icono"><i class="bi bi-building"></i></div>
+                            <div>
+                                <div class="perfil-dato-etiqueta">Sucursal</div>
+                                <div class="perfil-dato-valor">{{ sucursal_actual.nombre|default:"Sin asignar" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                     <div class="col-md-6">
                         <div class="perfil-dato">
                             <div class="perfil-dato-icono"><i class="bi bi-diagram-3"></i></div>
@@ -97,7 +126,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="{% if user.es_superadmin %}col-md-6{% else %}col-md-12{% endif %}">
                         <div class="perfil-dato">
                             <div class="perfil-dato-icono"><i class="bi bi-calendar3"></i></div>
                             <div>

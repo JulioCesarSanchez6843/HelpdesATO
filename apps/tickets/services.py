@@ -189,6 +189,14 @@ def registrar_creacion(ticket, autor):
     )
     emails.enviar_tras_commit(mensajes)
 
+def _marcar_primera_respuesta(ticket, actor):
+    if ticket.primera_respuesta_en is not None:
+        return
+    if not actor.es_personal or actor.pk == ticket.creado_por_id:
+        return
+    ticket.primera_respuesta_en = timezone.now()
+    ticket.save(update_fields=["primera_respuesta_en"])
+
 
 def snapshot(ticket):
     return {
@@ -229,6 +237,7 @@ def _avisar_espera_a_encargados(ticket, actor, motivo):
 def registrar_gestion(ticket, actor, antes, motivo=""):
     if ticket.estado != antes["estado"]:
         anterior = dict(Ticket.Estado.choices)[antes["estado"]]
+        _marcar_primera_respuesta(ticket, actor)
         por_confirmar = ticket.estado == Ticket.Estado.POR_CONFIRMAR
         en_espera = ticket.estado == Ticket.Estado.EN_ESPERA
 
@@ -502,13 +511,18 @@ def cerrar_automaticamente(ticket, dias):
             contexto_usuario=lambda destinatario: {"destinatario": destinatario},
         )
     )
+    
+
+def tomar_ticket(ticket, actor):
     antes = snapshot(ticket)
     ticket.asignado_a = actor
     campos = ["asignado_a"]
+    
     if ticket.estado == Ticket.Estado.ABIERTO:
         ticket.estado = Ticket.Estado.EN_PROCESO
         campos.append("estado")
     ticket.save(update_fields=campos)
+    _marcar_primera_respuesta(ticket, actor)
 
     Historial.objects.create(
         ticket=ticket,
@@ -600,6 +614,8 @@ def agregar_comentario(ticket, autor, contenido, interno=False):
     comentario = Comentario.objects.create(
         ticket=ticket, autor=autor, contenido=contenido, interno=interno
     )
+    if not interno:
+        _marcar_primera_respuesta(ticket, autor)
     registrar_evento(
         Evento.Tipo.TICKET_COMENTARIO,
         autor,

@@ -175,12 +175,6 @@
     border: 3px solid var(--tollocan-rojo);
 }
 
-.avatar-vacio {
-    font-size: 8rem;
-    line-height: 1;
-    color: #adb5bd;
-}
-
 @media (max-width: 767.98px) {
     .sidebar-tollocan {
         position: fixed;
@@ -266,58 +260,144 @@
 }
 
 .perfil-portada {
-    height: 100px;
-    background: linear-gradient(135deg, var(--barra), var(--tollocan-icono));
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    height: 150px;
+    padding: 18px 24px 56px;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--barra-clara), var(--barra) 55%, var(--tollocan-icono) 135%);
+}
+
+.perfil-marca {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    min-width: 0;
+}
+
+.perfil-marca-izq {
+    justify-content: flex-start;
+    max-width: 48%;
+}
+
+.perfil-marca-der {
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+.perfil-marca img {
+    display: block;
+    height: 100%;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    filter: brightness(0) invert(var(--barra-invertir));
+    opacity: 0.2;
+}
+
+.perfil-marca-texto {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--barra-texto);
+    font-family: "Rajdhani", "Segoe UI", sans-serif;
+    font-size: 1.7rem;
+    font-style: italic;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
 }
 
 .perfil-cuerpo {
-    padding-bottom: 1.5rem;
+    padding: 0.75rem 1.5rem 1.5rem;
 }
 
 .avatar-editable {
     position: relative;
     display: inline-block;
-    width: 160px;
-    height: 160px;
-    margin-top: -80px;
+    width: 112px;
+    height: 112px;
+    margin-top: -56px;
     border-radius: 50%;
     background-color: #ffffff;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
     cursor: pointer;
 }
 
 .avatar-editable .avatar-perfil {
     display: block;
-    border-width: 4px;
-    border-color: #ffffff;
+    width: 100%;
+    height: 100%;
+    border: 4px solid #ffffff;
 }
 
-.avatar-editable .avatar-vacio {
-    display: block;
-    font-size: 160px;
+.avatar-iniciales {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    border: 4px solid #ffffff;
     border-radius: 50%;
+    background: linear-gradient(135deg, var(--tollocan-icono), var(--tollocan-rojo-oscuro));
+    color: #ffffff;
+    font-size: 2.75rem;
+    font-weight: 700;
+    line-height: 1;
 }
 
 .avatar-camara {
     position: absolute;
-    right: 4px;
-    bottom: 4px;
+    right: 0;
+    bottom: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 42px;
-    height: 42px;
+    width: 34px;
+    height: 34px;
     border: 3px solid #ffffff;
     border-radius: 50%;
     background-color: var(--tollocan-rojo);
     color: #ffffff;
-    font-size: 1rem;
+    font-size: 0.85rem;
     transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .avatar-editable:hover .avatar-camara {
     background-color: var(--tollocan-rojo-oscuro);
     transform: scale(1.12);
+}
+
+.perfil-rol {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.85rem;
+    border-radius: 999px;
+    background-color: rgba(var(--tollocan-rgb), 0.1);
+    color: var(--tollocan-rojo);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.perfil-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid #eef0f2;
+}
+
+.perfil-ayuda {
+    margin: 0.9rem 0 0;
+    color: #8a9199;
+    font-size: 0.78rem;
 }
 
 .perfil-dato {

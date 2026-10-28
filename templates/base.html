@@ -50,14 +50,14 @@
                 <i class="bi bi-bell-fill fs-5"></i>{% if notificaciones_sin_leer %}<span class="badge rounded-pill bg-danger ms-1">{{ notificaciones_sin_leer }}</span>{% endif %}
             </a>
             <div class="dropdown d-flex align-items-center">
-                <div class="link-barra d-flex align-items-center">
+                <a class="link-barra d-flex align-items-center text-decoration-none" href="{% url 'mi_perfil' %}" title="Mi perfil">
                     {% if foto_version %}
                     <img src="{% url 'foto_usuario' user.pk %}?v={{ foto_version }}" alt="Foto de perfil" class="avatar-nav">
                     {% else %}
                     <i class="bi bi-person-circle fs-2"></i>
                     {% endif %}
                     <span class="ms-2 d-none d-sm-inline">{{ user.nombre }}</span>
-                </div>
+                </a>
                 <button class="navbar-toggler ms-3" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Menú de usuario">
                     <i class="bi bi-list fs-3"></i>
                 </button>

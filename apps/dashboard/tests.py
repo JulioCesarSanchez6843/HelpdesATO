@@ -36,7 +36,8 @@ class ReportesTests(TestCase):
         Ticket.objects.create(titulo="b", descripcion="d", area=self.area, creado_por=self.user)
         cerrado = Ticket.objects.create(
             titulo="c", descripcion="d", area=self.area, creado_por=self.user,
-            estado="CERRADO", cerrado_en=ahora + timedelta(hours=4))
+            estado="CERRADO", resuelto_en=ahora + timedelta(hours=4),
+            cerrado_en=ahora + timedelta(hours=4))
         Ticket.objects.filter(pk=cerrado.pk).update(creado_en=ahora)
         self.client.force_login(self.admin)
         ctx = self.client.get(reverse("reportes")).context
@@ -69,7 +70,7 @@ class EstadisticasYExcelTests(TestCase):
             ahora = timezone.now()
             Ticket.objects.filter(pk=t.pk).update(
                 creado_en=ahora - timedelta(hours=horas),
-                resuelto_en=ahora - timedelta(minutes=30),
+                resuelto_en=ahora,
                 cerrado_en=ahora)
             t.refresh_from_db()
         return t
