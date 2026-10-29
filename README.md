@@ -316,3 +316,5 @@ El proyecto incluye `render.yaml` y `build.sh` para desplegarlo en Render con un
 ---
 
 Hecho por **Juls**.
+
+Colaborador **Cris**
