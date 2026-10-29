@@ -205,6 +205,7 @@ _INTERLINEADOS_CSS = {
 }
 
 _URLS_INICIO = {
+    "INICIO": "panel_inicio",
     "TICKETS": "lista_tickets",
     "NOTIFICACIONES": "lista_notificaciones",
     "ACTIVIDAD": "actividad",
@@ -244,6 +245,7 @@ class PreferenciasUsuario(models.Model):
         AMPLIO = "AMPLIO", "Amplio"
 
     class PaginaInicio(models.TextChoices):
+        INICIO = "INICIO", "Pantalla de inicio"
         TICKETS = "TICKETS", "Tickets"
         NOTIFICACIONES = "NOTIFICACIONES", "Notificaciones"
         ACTIVIDAD = "ACTIVIDAD", "Actividad"
@@ -263,7 +265,7 @@ class PreferenciasUsuario(models.Model):
         max_length=10, choices=Interlineado.choices, default=Interlineado.NORMAL
     )
     pagina_inicio = models.CharField(
-        max_length=16, choices=PaginaInicio.choices, default=PaginaInicio.TICKETS
+        max_length=16, choices=PaginaInicio.choices, default=PaginaInicio.INICIO
     )
     correos_activos = models.BooleanField(default=True)
     correo_nuevos_tickets = models.BooleanField(default=True)
@@ -301,7 +303,7 @@ class PreferenciasUsuario(models.Model):
 
     @property
     def url_inicio(self):
-        return _URLS_INICIO.get(self.pagina_inicio, "lista_tickets")
+        return _URLS_INICIO.get(self.pagina_inicio, "panel_inicio")
 
     def permite_correo(self, plantilla):
         campo = _CAMPO_CORREO.get(plantilla)

@@ -41,6 +41,34 @@
     letter-spacing: 0.3px;
 }
 
+.navbar-tollocan .marca-texto {
+    flex-direction: column;
+    justify-content: center;
+    padding-left: 1rem;
+    border-left: 2px solid rgba(var(--barra-texto-rgb), 0.35);
+    color: var(--barra-texto);
+    line-height: 1;
+}
+
+.navbar-tollocan .marca-titulo {
+    font-family: "Rajdhani", "Segoe UI", sans-serif;
+    font-size: 1.9rem;
+    font-style: italic;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--barra-texto);
+}
+
+.navbar-tollocan .marca-subtitulo {
+    margin-top: 0.2rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(var(--barra-texto-rgb), 0.75);
+}
+
 .navbar-tollocan .navbar-toggler {
     padding: 0.15rem 0.5rem;
     color: var(--barra-texto);

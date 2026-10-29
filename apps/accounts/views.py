@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.tokens import default_token_generator
 from django.core.cache import cache
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -24,7 +24,8 @@ from django.utils import timezone
 from apps.actividad.models import Evento
 from apps.actividad.registro import registrar as registrar_evento
 from apps.tickets import emails as correos
-from apps.tickets.models import Notificacion
+from apps.tickets.models import Notificacion, Ticket
+from apps.tickets.views import _tickets_visibles
 
 from .decorators import admin_required
 from .forms import (
@@ -244,6 +245,38 @@ def ajustes(request):
 @login_required
 def inicio(request):
     return redirect(PreferenciasUsuario.de(request.user).url_inicio)
+
+@login_required
+def panel_inicio(request):
+    usuario = request.user
+    ahora = timezone.now()
+    estado = Ticket.Estado
+    tickets = _tickets_visibles(usuario)
+    sin_cerrar = ~Q(estado=estado.CERRADO)
+
+    conteos = tickets.aggregate(
+        activos=Count("id", filter=sin_cerrar),
+        abiertos=Count("id", filter=Q(estado=estado.ABIERTO)),
+        en_proceso=Count("id", filter=Q(estado=estado.EN_PROCESO)),
+        por_confirmar=Count("id", filter=Q(estado=estado.POR_CONFIRMAR)),
+        sin_asignar=Count(
+            "id", filter=Q(estado=estado.ABIERTO, asignado_a__isnull=True)
+        ),
+        mios=Count("id", filter=sin_cerrar & Q(asignado_a=usuario)),
+        vencidos=Count(
+            "id",
+            filter=Q(
+                estado__in=[estado.ABIERTO, estado.EN_PROCESO, estado.EN_ESPERA],
+                sla_vence_en__lt=ahora,
+            ),
+        ),
+    )
+
+    return render(request, "accounts/inicio.html", {
+        "conteos": conteos,
+        "recientes": tickets.order_by("-creado_en")[:5],
+        "pendientes": usuario.notificaciones.filter(leida=False).order_by("-creada_en")[:5],
+    })
 
 @login_required
 def foto_usuario(request, pk):

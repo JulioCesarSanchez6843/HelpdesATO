@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="mb-4">
+    <h3 class="mb-0">Hola, {{ user.nombre }}</h3>
+    <p class="text-muted mb-0">
+        {{ user.get_rol_display }}{% if user.sucursal %} · {{ user.sucursal.nombre }}{% endif %}
+    </p>
+</div>
+
+<div class="row g-3 mb-4">
+    {% if user.es_personal %}
+    <div class="col-6 col-md-4 col-xl">
+        <a href="{% url 'lista_tickets' %}?estado=ABIERTO" class="text-decoration-none">
+            <div class="card shadow-sm text-center">
+                <div class="card-body">
+                    <h3 class="mb-0">{{ conteos.sin_asignar }}</h3>
+                    <small class="text-muted">Sin asignar</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <a href="{% url 'lista_tickets' %}" class="text-decoration-none">
+            <div class="card shadow-sm text-center">
+                <div class="card-body">
+                    <h3 class="mb-0">{{ conteos.mios }}</h3>
+                    <small class="text-muted">Asignados a mí</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <a href="{% url 'lista_tickets' %}?estado=EN_PROCESO" class="text-decoration-none">
+            <div class="card shadow-sm text-center">
+                <div class="card-body">
+                    <h3 class="mb-0">{{ conteos.en_proceso }}</h3>
+                    <small class="text-muted">En proceso</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <a href="{% url 'lista_tickets' %}?estado=POR_CONFIRMAR" class="text-decoration-none">
+            <div class="card shadow-sm text-center">
+                <div class="card-body">
+                    <h3 class="mb-0">{{ conteos.por_confirmar }}</h3>
+                    <small class="text-muted">Por confirmar</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <a href="{% url 'lista_tickets' %}" class="text-decoration-none">
+            <div class="card shadow-sm text-center {% if conteos.vencidos %}border-danger{% endif %}">
+                <div class="card-body">
+                    <h3 class="mb-0">{{ conteos.vencidos }}</h3>
+                    <small class="text-muted">SLA vencido</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    {% else %}
+    <div class="col-6 col-md-3">
+        <a href="{% url 'lista_tickets' %}" class="text-decoration-none">
+            <div class="card shadow-sm text-center">
+                <div class="card-body">
+                    <h3 class="mb-0">{{ conteos.activos }}</h3>
+                    <small class="text-muted">Tickets activos</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="{% url 'lista_tickets' %}?estado=ABIERTO" class="text-decoration-none">
+            <div class="card shadow-sm text-center">
+                <div class="card-body">
+                    <h3 class="mb-0">{{ conteos.abiertos }}</h3>
+                    <small class="text-muted">Abiertos</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="{% url 'lista_tickets' %}?estado=EN_PROCESO" class="text-decoration-none">
+            <div class="card shadow-sm text-center">
+                <div class="card-body">
+                    <h3 class="mb-0">{{ conteos.en_proceso }}</h3>
+                    <small class="text-muted">En proceso</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="{% url 'lista_tickets' %}?estado=POR_CONFIRMAR" class="text-decoration-none">
+            <div class="card shadow-sm text-center {% if conteos.por_confirmar %}border-info{% endif %}">
+                <div class="card-body">
+                    <h3 class="mb-0">{{ conteos.por_confirmar }}</h3>
+                    <small class="text-muted">Esperan tu confirmación</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<h5 class="mb-3">Accesos rápidos</h5>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-4 col-xl-3">
+        <a href="{% url 'nuevo_ticket' %}" class="btn btn-primary w-100 py-3">
+            <i class="bi bi-plus-circle me-2"></i>Nuevo ticket
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <a href="{% url 'lista_tickets' %}" class="btn btn-outline-secondary w-100 py-3">
+            <i class="bi bi-ticket-perforated me-2"></i>{% if user.es_personal %}Tickets{% else %}Mis tickets{% endif %}
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <a href="{% url 'lista_notificaciones' %}" class="btn btn-outline-secondary w-100 py-3">
+            <i class="bi bi-bell me-2"></i>Notificaciones
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <a href="{% url 'actividad' %}" class="btn btn-outline-secondary w-100 py-3">
+            <i class="bi bi-clock-history me-2"></i>{% if user.es_admin %}Actividad{% else %}Mi actividad{% endif %}
+        </a>
+    </div>
+    {% if user.es_admin %}
+    <div class="col-6 col-md-4 col-xl-3">
+        <a href="{% url 'reportes' %}" class="btn btn-outline-secondary w-100 py-3">
+            <i class="bi bi-bar-chart-line me-2"></i>Reportes
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <a href="{% url 'lista_usuarios' %}" class="btn btn-outline-secondary w-100 py-3">
+            <i class="bi bi-people me-2"></i>Usuarios
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <a href="{% url 'lista_areas' %}" class="btn btn-outline-secondary w-100 py-3">
+            <i class="bi bi-diagram-3 me-2"></i>Catálogos
+        </a>
+    </div>
+    {% endif %}
+    {% if user.es_superadmin %}
+    <div class="col-6 col-md-4 col-xl-3">
+        <a href="{% url 'lista_sucursales' %}" class="btn btn-outline-secondary w-100 py-3">
+            <i class="bi bi-building me-2"></i>Sucursales
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <a href="{% url 'configuracion_sistema' %}" class="btn btn-outline-secondary w-100 py-3">
+            <i class="bi bi-sliders me-2"></i>Parámetros
+        </a>
+    </div>
+    {% endif %}
+    <div class="col-6 col-md-4 col-xl-3">
+        <a href="{% url 'mi_perfil' %}" class="btn btn-outline-secondary w-100 py-3">
+            <i class="bi bi-person-gear me-2"></i>Mi perfil
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <a href="{% url 'ajustes' %}" class="btn btn-outline-secondary w-100 py-3">
+            <i class="bi bi-gear me-2"></i>Ajustes
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title mb-3">
+                    {% if user.es_personal %}Tickets recientes{% else %}Mis últimos tickets{% endif %}
+                </h5>
+                {% for ticket in recientes %}
+                <div class="d-flex justify-content-between align-items-center py-2 {% if not forloop.last %}border-bottom{% endif %}">
+                    <div class="me-3">
+                        <a href="{% url 'detalle_ticket' ticket.pk %}" class="text-decoration-none fw-semibold">
+                            #{{ ticket.pk }} {{ ticket.titulo }}
+                        </a>
+                        <div class="small text-muted">
+                            {% if user.es_personal %}{{ ticket.creado_por.nombre }} · {% endif %}{{ ticket.creado_en|date:"d/m/Y H:i" }}
+                        </div>
+                    </div>
+                    {% include "tickets/_estado_badge.html" %}
+                </div>
+                {% empty %}
+                <p class="text-muted mb-0">Todavía no hay tickets.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Notificaciones sin leer</h5>
+                {% for n in pendientes %}
+                <form method="post" action="{% url 'abrir_notificacion' n.pk %}" class="py-2 {% if not forloop.last %}border-bottom{% endif %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-link text-start text-decoration-none p-0">
+                        {{ n.mensaje|truncatechars:90 }}
+                    </button>
+                    <div class="small text-muted">{{ n.creada_en|date:"d/m/Y H:i" }}</div>
+                </form>
+                {% empty %}
+                <p class="text-muted mb-0">No tienes notificaciones pendientes.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

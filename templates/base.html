@@ -39,9 +39,12 @@
     {% if user.is_authenticated %}
     <nav class="navbar navbar-tollocan px-3">
         <div class="d-flex align-items-center">
-            <a class="navbar-brand d-flex align-items-center" href="{% url 'lista_tickets' %}">
+            <a class="navbar-brand d-flex align-items-center" href="{% url 'inicio' %}">
                 <img src="{% static 'img/Logo_tollocan.png' %}" alt="Logo Tollocan" class="logo-navbar me-3">
-                <span class="d-none d-lg-inline">Helpdesk Tollocan</span>
+                <span class="marca-texto d-none d-lg-flex">
+                    <span class="marca-titulo">Helpdesk</span>
+                    <span class="marca-subtitulo">Tollocan · Soporte técnico</span>
+                </span>
             </a>
         </div>
 
@@ -95,6 +98,7 @@
     <div class="layout-app">
         <aside class="sidebar-tollocan">
             <div class="nav flex-column">
+                <a class="nav-link {% if request.resolver_match.url_name == 'panel_inicio' %}active{% endif %}" href="{% url 'panel_inicio' %}" title="Inicio"><i class="bi bi-house-door"></i><span class="etiqueta">Inicio</span></a>
                 {% if user.es_personal %}
                 <a class="nav-link {% if request.resolver_match.url_name == 'lista_tickets' %}active{% endif %}" href="{% url 'lista_tickets' %}" title="Tickets"><i class="bi bi-ticket-perforated"></i><span class="etiqueta">Tickets</span></a>
                 {% if user.es_admin %}

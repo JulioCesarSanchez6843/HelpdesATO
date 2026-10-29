@@ -18,7 +18,7 @@ class LoginTests(TestCase):
 
     def test_login_correcto_no_distingue_mayusculas(self):
         r = self.client.post(reverse("login"), {"correo": "ana@empresa.com", "password": PASSWORD})
-        self.assertRedirects(r, reverse("lista_tickets"), fetch_redirect_response=False)
+        self.assertRedirects(r, reverse("panel_inicio"), fetch_redirect_response=False)
 
     def test_password_incorrecta(self):
         r = self.client.post(reverse("login"), {"correo": "ana@empresa.com", "password": "mal"})
@@ -34,7 +34,7 @@ class LoginTests(TestCase):
         self.assertRedirects(r, "/tickets/nuevo/", fetch_redirect_response=False)
         self.client.logout()
         r = self.client.post(reverse("login"), {"correo": "ana@empresa.com", "password": PASSWORD, "next": "https://malo.com/"})
-        self.assertRedirects(r, reverse("lista_tickets"), fetch_redirect_response=False)
+        self.assertRedirects(r, reverse("panel_inicio"), fetch_redirect_response=False)
 
     def test_logout_solo_por_post(self):
         self.client.force_login(self.user)
