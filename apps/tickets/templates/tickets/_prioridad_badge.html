@@ -1,0 +1,11 @@
+{% if ticket.prioridad == "CRITICA" %}
+<span class="badge bg-danger">{{ ticket.get_prioridad_display }}</span>
+{% elif ticket.prioridad == "ALTA" %}
+<span class="badge bg-danger-subtle text-danger-emphasis">{{ ticket.get_prioridad_display }}</span>
+{% elif ticket.prioridad == "MEDIA" %}
+<span class="badge bg-warning-subtle text-warning-emphasis">{{ ticket.get_prioridad_display }}</span>
+{% elif ticket.prioridad == "BAJA" %}
+<span class="badge bg-secondary-subtle text-secondary-emphasis">{{ ticket.get_prioridad_display }}</span>
+{% else %}
+<span class="badge bg-light text-muted border">Sin prioridad</span>
+{% endif %}

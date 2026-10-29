@@ -297,6 +297,7 @@
                 <th>Categoría</th>
                 <th>Asignado a</th>
                 <th>Estado</th>
+                <th>Prioridad</th>
                 <th>Fecha</th>
             </tr>
 
@@ -360,6 +361,13 @@
 
                         {% include "tickets/_estado_badge.html" %}
 
+                    </td>
+
+                    <td>
+                        {% include "tickets/_prioridad_badge.html" %}
+                        {% if ticket.sla_vencido %}
+                            <span class="badge bg-danger">SLA vencido</span>
+                        {% endif %}
                     </td>
 
                     <td>

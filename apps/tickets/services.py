@@ -202,6 +202,7 @@ def snapshot(ticket):
     return {
         "estado": ticket.estado,
         "categoria_id": ticket.categoria_id,
+        "prioridad": ticket.prioridad,
     }
 
 
@@ -319,6 +320,17 @@ def registrar_gestion(ticket, actor, antes, motivo=""):
             usuario=actor,
             tipo=Historial.Tipo.CATEGORIA,
             contenido=f"Categoría cambiada a «{nueva}».",
+        )
+
+    if ticket.prioridad != antes["prioridad"]:
+        Historial.objects.create(
+            ticket=ticket,
+            usuario=actor,
+            tipo=Historial.Tipo.PRIORIDAD,
+            contenido=(
+                "Prioridad establecida en "
+                f"«{ticket.get_prioridad_display() or 'Sin definir'}»."
+            ),
         )
 
 
@@ -714,4 +726,17 @@ def reabrir_ticket(ticket, actor, motivo):
             "ticket_reabierto",
             _contexto(ticket, motivo=motivo, reabierto_por=actor),
         )
+    )
+
+def aplicar_prioridad(ticket, actor, prioridad):
+    if ticket.prioridad == prioridad:
+        return
+    ticket.prioridad = prioridad
+    ticket.recalcular_sla()
+    ticket.save(update_fields=["prioridad", "prioridad_en", "sla_vence_en"])
+    Historial.objects.create(
+        ticket=ticket,
+        usuario=actor,
+        tipo=Historial.Tipo.PRIORIDAD,
+        contenido=f"Prioridad establecida en «{ticket.get_prioridad_display()}».",
     )

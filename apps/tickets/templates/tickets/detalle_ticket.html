@@ -41,6 +41,18 @@
                         <strong>Asignado a:</strong>
                         {{ ticket.asignado_a|default:"Sin asignar" }}
                     </li>
+                    {% if form_gestion %}
+                        <li>
+                            <strong>Prioridad:</strong>
+                            {% include "tickets/_prioridad_badge.html" %}
+                            {% if ticket.sla_vence_en %}
+                                · vence el {{ ticket.sla_vence_en|date:"d/m/Y H:i" }}
+                                {% if ticket.sla_vencido %}
+                                    <span class="badge bg-danger">SLA vencido</span>
+                                {% endif %}
+                            {% endif %}
+                        </li>
+                    {% endif %}
 
                     {% if ticket.resuelto_por %}
                         <li>

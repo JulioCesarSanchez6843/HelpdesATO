@@ -13,6 +13,12 @@ class Ticket(models.Model):
         POR_CONFIRMAR = "POR_CONFIRMAR", "Por confirmar"
         CERRADO = "CERRADO", "Cerrado"
 
+    class Prioridad(models.TextChoices):
+        CRITICA = "CRITICA", "Crítica"
+        ALTA = "ALTA", "Alta"
+        MEDIA = "MEDIA", "Media"
+        BAJA = "BAJA", "Baja"
+
     titulo = models.CharField(max_length=150)
     descripcion = models.TextField()
 
@@ -69,6 +75,12 @@ class Ticket(models.Model):
     nota_resolucion = models.TextField(blank=True)
     justificacion_cierre = models.TextField(blank=True)
 
+    prioridad = models.CharField(
+        max_length=10, choices=Prioridad.choices, blank=True
+    )
+    prioridad_en = models.DateTimeField(null=True, blank=True)
+    sla_vence_en = models.DateTimeField(null=True, blank=True)
+
     creado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -90,6 +102,21 @@ class Ticket(models.Model):
 
     def __str__(self):
         return f"Ticket #{self.pk} - {self.titulo}"
+
+    def recalcular_sla(self):
+        if not self.prioridad:
+            self.prioridad_en = None
+            self.sla_vence_en = None
+            return
+        self.prioridad_en = timezone.now()
+        horas = settings.SLA_HORAS[self.prioridad]
+        self.sla_vence_en = self.prioridad_en + timedelta(hours=horas)
+
+    @property
+    def sla_vencido(self):
+        if self.sla_vence_en is None:
+            return False
+        return (self.resuelto_en or timezone.now()) > self.sla_vence_en
 
     @property
     def esperando_confirmacion(self):
@@ -140,6 +167,7 @@ class Historial(models.Model):
         CAMBIO_ESTADO = "CAMBIO_ESTADO", "Cambio de estado"
         CATEGORIA = "CATEGORIA", "Cambio de categoría"
         ASIGNACION = "ASIGNACION", "Asignación"
+        PRIORIDAD = "PRIORIDAD", "Cambio de prioridad"
 
     ticket = models.ForeignKey(
         Ticket,

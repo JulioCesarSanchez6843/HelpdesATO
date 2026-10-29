@@ -53,6 +53,18 @@
 
           <form method="post">
             {% csrf_token %}
+            {% if pide_prioridad %}
+              <label for="prioridad" class="form-label">Prioridad (SLA) *</label>
+              <select name="prioridad" id="prioridad" class="form-select mb-3" required>
+                <option value="">Elige…</option>
+                {% for valor, etiqueta in prioridades %}
+                  <option value="{{ valor }}">{{ etiqueta }}</option>
+                {% endfor %}
+              </select>
+              {% if error_prioridad %}
+                <div class="text-danger small mb-3">Elige la prioridad para continuar.</div>
+              {% endif %}
+            {% endif %}
             <button type="submit" class="btn btn-warning w-100">
               Sí, pasar a «En proceso»
             </button>

@@ -115,6 +115,7 @@ SITE_URL = config("SITE_URL", default="http://localhost:8000").rstrip("/")
 
 CIERRE_TOKEN_MAX_AGE = 60 * 60 * 24 * config("CIERRE_TOKEN_DIAS", default=7, cast=int)
 REABRIR_TICKET_DIAS = config("REABRIR_TICKET_DIAS", default=7, cast=int)
+SLA_HORAS = {"CRITICA": 4, "ALTA": 8, "MEDIA": 24, "BAJA": 72}
 PASSWORD_RESET_TIMEOUT = 60 * 60
 ACCESO_TOKEN_MAX_AGE = 60 * 60 * 24 * config("ACCESO_TOKEN_DIAS", default=2, cast=int)
 

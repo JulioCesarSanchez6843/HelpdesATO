@@ -100,18 +100,27 @@ class TicketGestionForm(BootstrapFormMixin, forms.ModelForm):
         ),
     )
 
-    field_order = ["estado", "motivo_espera", "categoria", "numero_serie", "nota_resolucion"]
+    field_order = [
+        "estado",
+        "prioridad",
+        "motivo_espera",
+        "categoria",
+        "numero_serie",
+        "nota_resolucion",
+    ]
 
     class Meta:
         model = Ticket
         fields = [
             "estado",
+            "prioridad",
             "categoria",
             "numero_serie",
             "nota_resolucion",
         ]
         labels = {
             "estado": "Estado",
+            "prioridad": "Prioridad (SLA)",
             "categoria": "Categoría",
             "numero_serie": "Número de serie / Service Tag",
             "nota_resolucion": "Nota de resolución",
@@ -134,8 +143,12 @@ class TicketGestionForm(BootstrapFormMixin, forms.ModelForm):
             "nota_resolucion": forms.Textarea(attrs={"rows": 3}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, usuario=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.puede_priorizar = bool(usuario and usuario.es_admin)
+        if not self.puede_priorizar:
+            del self.fields["prioridad"]
+        self.prioridad_original = self.instance.prioridad
         self.fields["categoria"].required = False
         sucursal_id = self.instance.sucursal_id
         self.fields["categoria"].queryset = (
@@ -189,12 +202,32 @@ class TicketGestionForm(BootstrapFormMixin, forms.ModelForm):
                 "Escribe la nota de resolución para pedirle la confirmación al usuario.",
             )
 
+        if self.puede_priorizar:
+            prioridad = datos.get("prioridad")
+            if (
+                estado == Ticket.Estado.EN_PROCESO
+                and self.estado_original != Ticket.Estado.EN_PROCESO
+                and not prioridad
+            ):
+                self.add_error(
+                    "prioridad",
+                    "Elige la prioridad para pasar el ticket a «En proceso».",
+                )
+            if self.prioridad_original and not prioridad:
+                self.add_error(
+                    "prioridad",
+                    "No se puede quitar la prioridad una vez definida.",
+                )
+
         resuelto = estado in (Ticket.Estado.POR_CONFIRMAR, Ticket.Estado.CERRADO)
         datos["nota_resolucion"] = nota if resuelto else ""
         return datos
 
     def save(self, commit=True):
         ticket = super().save(commit=False)
+
+        if self.puede_priorizar and ticket.prioridad != self.prioridad_original:
+            ticket.recalcular_sla()
 
         if ticket.estado == Ticket.Estado.POR_CONFIRMAR:
             if self.estado_original != Ticket.Estado.POR_CONFIRMAR:
@@ -219,9 +252,16 @@ class AsignarTicketForm(BootstrapFormMixin, forms.Form):
         required=False,
         empty_label="Sin asignar",
     )
+    prioridad = forms.ChoiceField(
+        label="Prioridad (SLA)",
+        choices=[("", "Elige…")] + Ticket.Prioridad.choices,
+        required=False,
+    )
 
     def __init__(self, *args, ticket, **kwargs):
         super().__init__(*args, **kwargs)
+        self.ticket = ticket
+        self.fields["prioridad"].initial = ticket.prioridad
         campo = self.fields["asignado_a"]
         campo.queryset = Usuario.objects.filter(
             rol__in=[Usuario.Rol.ENCARGADO, Usuario.Rol.BECARIO],
@@ -230,6 +270,16 @@ class AsignarTicketForm(BootstrapFormMixin, forms.Form):
         )
         campo.initial = ticket.asignado_a_id
         campo.label_from_instance = lambda u: f"{u.nombre} ({u.get_rol_display()})"
+
+    def clean(self):
+        datos = super().clean()
+        if (
+            datos.get("asignado_a")
+            and not datos.get("prioridad")
+            and not self.ticket.prioridad
+        ):
+            self.add_error("prioridad", "Elige la prioridad al asignar el ticket.")
+        return datos
 
 class ConfiguracionSistemaForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:

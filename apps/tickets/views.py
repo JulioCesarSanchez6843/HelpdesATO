@@ -127,7 +127,11 @@ def detalle_ticket(request, pk):
 
     es_personal = request.user.es_personal
 
-    form_gestion = TicketGestionForm(instance=ticket) if es_personal else None
+    form_gestion = (
+        TicketGestionForm(instance=ticket, usuario=request.user)
+        if es_personal
+        else None
+    )
 
     if request.method == "POST" and "guardar_gestion" in request.POST:
         if not es_personal:
@@ -138,7 +142,9 @@ def detalle_ticket(request, pk):
         with transaction.atomic():
             instancia = Ticket.objects.select_for_update().get(pk=ticket.pk)
             antes = services.snapshot(instancia)
-            form_gestion = TicketGestionForm(request.POST, instance=instancia)
+            form_gestion = TicketGestionForm(
+                request.POST, instance=instancia, usuario=request.user
+            )
 
             if form_gestion.is_valid():
                 form_gestion.save()
@@ -369,10 +375,25 @@ def marcar_en_proceso(request, token):
             {"ticket": ticket, "resultado": "ya_atendido"},
         )
 
+    contexto = {
+        "ticket": ticket,
+        "pide_prioridad": admin.es_admin,
+        "prioridades": Ticket.Prioridad.choices,
+    }
+
     if request.method == "POST":
+        prioridad = request.POST.get("prioridad", "")
+        if admin.es_admin and prioridad not in Ticket.Prioridad.values:
+            return render(
+                request,
+                "tickets/en_proceso.html",
+                {**contexto, "error_prioridad": True},
+            )
         with transaction.atomic():
             ticket = Ticket.objects.select_for_update().get(pk=ticket.pk)
             if ticket.estado == Ticket.Estado.ABIERTO:
+                if admin.es_admin:
+                    services.aplicar_prioridad(ticket, admin, prioridad)
                 services.poner_en_proceso(ticket, admin)
                 resultado = "hecho"
             else:
@@ -383,7 +404,7 @@ def marcar_en_proceso(request, token):
             {"ticket": ticket, "resultado": resultado},
         )
 
-    return render(request, "tickets/en_proceso.html", {"ticket": ticket})
+    return render(request, "tickets/en_proceso.html", contexto)
 
 
 @admin_required
@@ -438,17 +459,21 @@ def asignar_ticket(request, pk):
     form = AsignarTicketForm(request.POST, ticket=ticket)
 
     if not form.is_valid():
-        messages.error(
-            request, "Elige a un encargado o becario de la sucursal del ticket."
-        )
+        mensaje = " ".join(e for errores in form.errors.values() for e in errores)
+        messages.error(request, mensaje or "Revisa los datos de la asignación.")
     else:
         destino = form.cleaned_data["asignado_a"]
-        if destino == ticket.asignado_a:
-            messages.info(request, "El ticket ya tenía esa asignación.")
+        prioridad = form.cleaned_data["prioridad"]
+        sin_cambio_prioridad = not prioridad or prioridad == ticket.prioridad
+        if destino == ticket.asignado_a and sin_cambio_prioridad:
+            messages.info(request, "No hubo cambios.")
         else:
             with transaction.atomic():
-                services.asignar_ticket(ticket, request.user, destino)
-            messages.success(request, "Asignación actualizada.")
+                if prioridad:
+                    services.aplicar_prioridad(ticket, request.user, prioridad)
+                if destino != ticket.asignado_a:
+                    services.asignar_ticket(ticket, request.user, destino)
+            messages.success(request, "Ticket actualizado.")
 
     return redirect("detalle_ticket", pk=pk)
 
