@@ -48,6 +48,8 @@ urlpatterns = [
 
     path("<int:pk>/forzar-cierre/", views.forzar_cierre, name="forzar_cierre"),
 
+    path("<int:pk>/reabrir/", views.reabrir_ticket, name="reabrir_ticket"),
+
     path("<int:pk>/comentar/", views.comentar_ticket, name="comentar_ticket"),
 
     path("<int:pk>/tomar/", views.tomar_ticket, name="tomar_ticket"),

@@ -1,0 +1,9 @@
+{% autoescape off %}{{ reabierto_por.nombre }} reabrió el ticket.
+
+Ticket #{{ ticket.pk }}: {{ ticket.titulo }}
+
+Motivo:
+{{ motivo }}
+
+{{ url_ticket }}
+{% endautoescape %}

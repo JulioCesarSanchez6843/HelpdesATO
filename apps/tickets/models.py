@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -81,6 +83,10 @@ class Ticket(models.Model):
 
     class Meta:
         ordering = ["-creado_en"]
+        indexes = [
+            models.Index(fields=["estado", "sucursal"]),
+            models.Index(fields=["creado_en"]),
+        ]
 
     def __str__(self):
         return f"Ticket #{self.pk} - {self.titulo}"
@@ -88,6 +94,17 @@ class Ticket(models.Model):
     @property
     def esperando_confirmacion(self):
         return self.estado == self.Estado.POR_CONFIRMAR
+
+    @property
+    def reabrible_hasta(self):
+        if self.estado != self.Estado.CERRADO or self.cerrado_en is None:
+            return None
+        return self.cerrado_en + timedelta(days=settings.REABRIR_TICKET_DIAS)
+
+    @property
+    def dentro_de_plazo_reapertura(self):
+        limite = self.reabrible_hasta
+        return limite is not None and timezone.now() <= limite
 
 
 class AdjuntoTicket(models.Model):

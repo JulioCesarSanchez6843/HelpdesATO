@@ -175,6 +175,8 @@ def detalle_ticket(request, pk):
             "ticket": ticket,
             "comentarios": comentarios,
             "puede_comentar": ticket.estado != Ticket.Estado.CERRADO,
+            "puede_reabrir": ticket.dentro_de_plazo_reapertura,
+            "reabrible_hasta": ticket.reabrible_hasta,
             "historial": ticket.historial.select_related("usuario"),
             "adjuntos": ticket.adjuntos.defer("contenido"),
             "form_gestion": form_gestion,
@@ -493,3 +495,28 @@ def notificaciones_leer_todas(request):
     )
 
     return redirect("lista_notificaciones")
+
+@login_required
+@require_POST
+def reabrir_ticket(request, pk):
+    get_object_or_404(_tickets_visibles(request.user), pk=pk)
+    motivo = request.POST.get("motivo", "").strip()[:1000]
+
+    if len(motivo) < 5:
+        messages.error(
+            request, "Escribe el motivo de la reapertura (mínimo 5 caracteres)."
+        )
+        return redirect("detalle_ticket", pk=pk)
+
+    with transaction.atomic():
+        ticket = get_object_or_404(Ticket.objects.select_for_update(), pk=pk)
+
+        if ticket.estado != Ticket.Estado.CERRADO:
+            messages.error(request, "Solo se puede reabrir un ticket cerrado.")
+        elif not ticket.dentro_de_plazo_reapertura:
+            messages.error(request, "El plazo para reabrir este ticket ya venció.")
+        else:
+            services.reabrir_ticket(ticket, request.user, motivo)
+            messages.success(request, "Ticket reabierto.")
+
+    return redirect("detalle_ticket", pk=pk)

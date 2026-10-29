@@ -217,6 +217,37 @@
             </div>
         {% endif %}
 
+        {% if puede_reabrir %}
+            <div class="card border-warning mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">¿Sigue el problema?</h5>
+                    <p class="text-muted">
+                        Puedes reabrir este ticket hasta el
+                        {{ reabrible_hasta|date:"d/m/Y H:i" }}.
+                    </p>
+                    <form method="post" action="{% url 'reabrir_ticket' ticket.pk %}">
+                        {% csrf_token %}
+                        <textarea
+                            name="motivo"
+                            class="form-control mb-2"
+                            rows="2"
+                            minlength="5"
+                            maxlength="1000"
+                            required
+                            placeholder="Cuéntanos por qué reabres el ticket"
+                        ></textarea>
+                        <button type="submit" class="btn btn-warning w-100">
+                            Reabrir ticket
+                        </button>
+                    </form>
+                </div>
+            </div>
+        {% elif ticket.estado == "CERRADO" %}
+            <div class="alert alert-secondary">
+                El plazo para reabrir este ticket ya venció.
+            </div>
+        {% endif %}
+
         <h5>Conversación</h5>
 
         <div class="card mb-3">

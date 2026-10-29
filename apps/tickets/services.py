@@ -653,3 +653,65 @@ def agregar_comentario(ticket, autor, contenido, interno=False):
             )
         )
     return comentario
+
+def reabrir_ticket(ticket, actor, motivo):
+    anterior = ticket.get_estado_display()
+    ticket.estado = (
+        Ticket.Estado.EN_PROCESO if ticket.asignado_a_id else Ticket.Estado.ABIERTO
+    )
+    ticket.cerrado_en = None
+    ticket.resuelto_en = None
+    ticket.resuelto_por = None
+    ticket.nota_resolucion = ""
+    ticket.justificacion_cierre = ""
+    ticket.recordatorio_cierre_en = None
+    ticket.save(
+        update_fields=[
+            "estado",
+            "cerrado_en",
+            "resuelto_en",
+            "resuelto_por",
+            "nota_resolucion",
+            "justificacion_cierre",
+            "recordatorio_cierre_en",
+        ]
+    )
+
+    texto = (
+        f"Estado cambiado de «{anterior}» a «{ticket.get_estado_display()}». "
+        f"Ticket reabierto por {actor.nombre}. Motivo: {motivo}"
+    )
+    Historial.objects.create(
+        ticket=ticket,
+        usuario=actor,
+        tipo=Historial.Tipo.CAMBIO_ESTADO,
+        contenido=texto,
+    )
+    registrar_evento(
+        Evento.Tipo.TICKET_ESTADO,
+        actor,
+        ticket=ticket,
+        detalle=texto,
+    )
+
+    destinatarios = _admins_activos(ticket)
+    if ticket.asignado_a_id:
+        destinatarios.append(ticket.asignado_a)
+    if actor.pk != ticket.creado_por_id:
+        destinatarios.append(ticket.creado_por)
+
+    _notificar(
+        destinatarios,
+        Notificacion.Tipo.CAMBIO_ESTADO,
+        f"{actor.nombre} reabrió el ticket #{ticket.pk}.",
+        ticket,
+        actor,
+    )
+    emails.enviar_tras_commit(
+        emails.construir(
+            _sin(destinatarios, actor),
+            f"Ticket #{ticket.pk} reabierto",
+            "ticket_reabierto",
+            _contexto(ticket, motivo=motivo, reabierto_por=actor),
+        )
+    )
