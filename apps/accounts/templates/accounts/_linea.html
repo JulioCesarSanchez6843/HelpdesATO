@@ -1,0 +1,5 @@
+{% if url %}<a href="{{ url }}{{ filtro }}" class="linea-nota{% if alerta %} linea-{{ tono }}{% endif %}">{% else %}<div class="linea-nota{% if alerta %} linea-{{ tono }}{% endif %}">{% endif %}
+    <span class="linea-etiqueta">{{ etiqueta }}</span>
+    <span class="linea-puntos"></span>
+    <span class="linea-valor">{{ valor }}{{ unidad }}</span>
+{% if url %}</a>{% else %}</div>{% endif %}

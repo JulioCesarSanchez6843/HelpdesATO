@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.tokens import default_token_generator
 from django.core.cache import cache
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -24,7 +24,7 @@ from django.utils import timezone
 from apps.actividad.models import Evento
 from apps.actividad.registro import registrar as registrar_evento
 from apps.tickets import emails as correos
-from apps.tickets.models import Notificacion, Ticket
+from apps.tickets.models import ConfiguracionSistema, CorreoPendiente, Notificacion, Ticket
 from apps.tickets.views import _tickets_visibles
 
 from .decorators import admin_required
@@ -246,6 +246,81 @@ def ajustes(request):
 def inicio(request):
     return redirect(PreferenciasUsuario.de(request.user).url_inicio)
 
+def _inicio_encargado(usuario, ahora):
+    estado = Ticket.Estado
+    vivos = [estado.ABIERTO, estado.EN_PROCESO, estado.EN_ESPERA]
+    abiertos = vivos + [estado.POR_CONFIRMAR]
+    equipo = (
+        Usuario.objects.filter(
+            activo=True,
+            sucursal_id=usuario.sucursal_id,
+            rol__in=[Usuario.Rol.BECARIO, Usuario.Rol.ENCARGADO],
+        )
+        .annotate(
+            activos=Count(
+                "tickets_asignados",
+                filter=Q(tickets_asignados__estado__in=abiertos),
+            ),
+            vencidos=Count(
+                "tickets_asignados",
+                filter=Q(
+                    tickets_asignados__estado__in=vivos,
+                    tickets_asignados__sla_vence_en__lt=ahora,
+                ),
+            ),
+        )
+        .order_by("-activos", "nombre")
+    )
+    return {
+        "equipo": equipo,
+        "actividad": Evento.objects.filter(sucursal_id=usuario.sucursal_id)[:6],
+    }
+
+
+def _inicio_superadmin(ahora):
+    estado = Ticket.Estado
+    vivos = [estado.ABIERTO, estado.EN_PROCESO, estado.EN_ESPERA]
+    abiertos = vivos + [estado.POR_CONFIRMAR]
+    por_sucursal = (
+        Sucursal.objects.defer("logo")
+        .filter(activa=True)
+        .annotate(
+            activos=Count("tickets", filter=Q(tickets__estado__in=abiertos)),
+            sin_asignar=Count(
+                "tickets",
+                filter=Q(
+                    tickets__estado=estado.ABIERTO,
+                    tickets__asignado_a__isnull=True,
+                ),
+            ),
+            vencidos=Count(
+                "tickets",
+                filter=Q(
+                    tickets__estado__in=vivos,
+                    tickets__sla_vence_en__lt=ahora,
+                ),
+            ),
+        )
+        .order_by("-vencidos", "-sin_asignar", "nombre")
+    )
+    personas = Usuario.objects.filter(activo=True).aggregate(
+        total=Count("id"),
+        encargados=Count("id", filter=Q(rol=Usuario.Rol.ENCARGADO)),
+        becarios=Count("id", filter=Q(rol=Usuario.Rol.BECARIO)),
+        usuarios=Count("id", filter=Q(rol=Usuario.Rol.USUARIO)),
+    )
+    correos = CorreoPendiente.objects.aggregate(
+        pendientes=Count("id", filter=Q(estado=CorreoPendiente.Estado.PENDIENTE)),
+        errores=Count("id", filter=Q(estado=CorreoPendiente.Estado.ERROR)),
+    )
+    return {
+        "por_sucursal": por_sucursal,
+        "personas": personas,
+        "correos": correos,
+        "sistema": ConfiguracionSistema.actual(),
+        "actividad": Evento.objects.select_related("sucursal")[:6],
+    }
+
 @login_required
 def panel_inicio(request):
     usuario = request.user
@@ -253,6 +328,10 @@ def panel_inicio(request):
     estado = Ticket.Estado
     tickets = _tickets_visibles(usuario)
     sin_cerrar = ~Q(estado=estado.CERRADO)
+    vivos = [estado.ABIERTO, estado.EN_PROCESO, estado.EN_ESPERA]
+    local = timezone.localtime(ahora)
+    inicio_dia = local.replace(hour=0, minute=0, second=0, microsecond=0)
+    inicio_mes = inicio_dia.replace(day=1)
 
     conteos = tickets.aggregate(
         activos=Count("id", filter=sin_cerrar),
@@ -264,19 +343,55 @@ def panel_inicio(request):
         ),
         mios=Count("id", filter=sin_cerrar & Q(asignado_a=usuario)),
         vencidos=Count(
+            "id", filter=Q(estado__in=vivos, sla_vence_en__lt=ahora)
+        ),
+        por_vencer=Count(
             "id",
             filter=Q(
-                estado__in=[estado.ABIERTO, estado.EN_PROCESO, estado.EN_ESPERA],
-                sla_vence_en__lt=ahora,
+                estado__in=vivos,
+                sla_vence_en__gte=ahora,
+                sla_vence_en__lte=ahora + timedelta(hours=4),
             ),
         ),
+        sin_prioridad=Count("id", filter=Q(estado__in=vivos, prioridad="")),
+        creados_hoy=Count("id", filter=Q(creado_en__gte=inicio_dia)),
+        resueltos_mes=Count("id", filter=Q(resuelto_en__gte=inicio_mes)),
     )
 
-    return render(request, "accounts/inicio.html", {
+    if usuario.es_superadmin:
+        vista = "superadmin"
+    elif usuario.es_encargado:
+        vista = "encargado"
+    elif usuario.es_becario:
+        vista = "becario"
+    else:
+        vista = "usuario"
+
+    if local.hour < 12:
+        saludo = "Buenos días"
+    elif local.hour < 19:
+        saludo = "Buenas tardes"
+    else:
+        saludo = "Buenas noches"
+
+    contexto = {
+        "vista": vista,
+        "saludo": saludo,
         "conteos": conteos,
-        "recientes": tickets.order_by("-creado_en")[:5],
         "pendientes": usuario.notificaciones.filter(leida=False).order_by("-creada_en")[:5],
-    })
+        "sla": [
+            (Ticket.Prioridad(clave).label, horas)
+            for clave, horas in settings.SLA_HORAS.items()
+        ],
+        "reabrir_dias": settings.REABRIR_TICKET_DIAS,
+    }
+
+    if vista == "encargado":
+        contexto.update(_inicio_encargado(usuario, ahora))
+    elif vista == "superadmin":
+        contexto.update(_inicio_superadmin(ahora))
+
+    return render(request, "accounts/inicio.html", contexto)
 
 @login_required
 def foto_usuario(request, pk):
