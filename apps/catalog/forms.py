@@ -7,6 +7,7 @@ from django.utils import timezone
 from PIL import Image, ImageOps
 
 from apps.accounts.forms import BootstrapFormMixin
+from apps.accounts.utilidades import entero_positivo
 from .models import Area, Categoria, Puesto, Sucursal
 
 def _quitar_fondo_blanco(imagen):
@@ -86,8 +87,7 @@ class _CatalogoPorSucursalForm(_CatalogoForm):
         if self.instance.pk:
             return self.instance.sucursal_id
         if "sucursal_destino" in self.fields:
-            valor = self.data.get("sucursal_destino", "")
-            return int(valor) if valor.isdigit() else None
+            return entero_positivo(self.data.get("sucursal_destino", ""))
         return self.solicitante.sucursal_id
 
     def clean_nombre(self):

@@ -11,6 +11,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth import login
 
 from apps.accounts.decorators import admin_required, personal_required
+from apps.accounts.utilidades import entero_positivo
 from apps.catalog.models import Area, Categoria, Sucursal
 
 from . import acceso, services
@@ -21,7 +22,7 @@ from .forms import (
     TicketGestionForm,
 )
 from .imagenes import ImagenInvalida
-from .models import AdjuntoTicket, Ticket
+from .models import AdjuntoTicket, Historial, Ticket
 
 
 ESTADOS_VALIDOS = {valor for valor, _ in Ticket.Estado.choices}
@@ -83,18 +84,21 @@ def lista_tickets(request):
     else:
         estado = ""
 
-    if es_personal and area.isdigit():
-        tickets = tickets.filter(area_id=int(area))
+    area_id = entero_positivo(area) if es_personal else None
+    if area_id is not None:
+        tickets = tickets.filter(area_id=area_id)
     else:
         area = ""
 
-    if es_personal and categoria.isdigit():
-        tickets = tickets.filter(categoria_id=int(categoria))
+    categoria_id = entero_positivo(categoria) if es_personal else None
+    if categoria_id is not None:
+        tickets = tickets.filter(categoria_id=categoria_id)
     else:
         categoria = ""
 
-    if request.user.es_superadmin and sucursal.isdigit():
-        tickets = tickets.filter(sucursal_id=int(sucursal))
+    sucursal_id = entero_positivo(sucursal) if request.user.es_superadmin else None
+    if sucursal_id is not None:
+        tickets = tickets.filter(sucursal_id=sucursal_id)
     else:
         sucursal = ""
 
@@ -176,8 +180,10 @@ def detalle_ticket(request, pk):
 
         comentarios = ticket.comentarios.select_related("autor")
     comentarios = ticket.comentarios.select_related("autor")
+
+    historial = ticket.historial.select_related("usuario")
     if not es_personal:
-        comentarios = comentarios.filter(interno=False)
+        historial = historial.exclude(tipo=Historial.Tipo.ESCALADO)
 
     return render(
         request,
@@ -188,7 +194,7 @@ def detalle_ticket(request, pk):
             "puede_comentar": ticket.estado != Ticket.Estado.CERRADO,
             "puede_reabrir": ticket.dentro_de_plazo_reapertura,
             "reabrible_hasta": ticket.reabrible_hasta,
-            "historial": ticket.historial.select_related("usuario"),
+            "historial": historial,
             "adjuntos": ticket.adjuntos.defer("contenido"),
             "form_gestion": form_gestion,
             "puede_responder_cierre": (

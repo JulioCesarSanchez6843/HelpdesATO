@@ -1,12 +1,37 @@
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.forms import UserChangeForm, UserCreationForm
 from django.shortcuts import redirect
 
 from .models import SolicitudCambioPassword, Usuario
 
+class SucursalObligatoriaMixin:
+    def clean(self):
+        datos = super().clean()
+        es_superior = (
+            datos.get("rol") == Usuario.Rol.SUPERADMIN
+            or datos.get("is_superuser", self.instance.is_superuser)
+        )
+        if not es_superior and datos.get("activo", True) and not datos.get("sucursal"):
+            self.add_error("sucursal", "Selecciona la sucursal del usuario.")
+        return datos
+
+
+class UsuarioAdminCreationForm(SucursalObligatoriaMixin, UserCreationForm):
+    class Meta(UserCreationForm.Meta):
+        model = Usuario
+        fields = ("correo", "nombre")
+        field_classes = {}
+
+
+class UsuarioAdminChangeForm(SucursalObligatoriaMixin, UserChangeForm):
+    class Meta(UserChangeForm.Meta):
+        model = Usuario
 
 class UsuarioAdmin(UserAdmin):
     model = Usuario
+    form = UsuarioAdminChangeForm
+    add_form = UsuarioAdminCreationForm
     ordering = ("nombre",)
     list_display = ("nombre", "correo", "rol", "activo", "is_staff")
     list_filter = ("rol", "activo", "is_staff")
@@ -14,7 +39,7 @@ class UsuarioAdmin(UserAdmin):
 
     fieldsets = (
         (None, {"fields": ("correo", "password")}),
-        ("Información personal", {"fields": ("nombre", "rol", "puesto", "area")}),
+        ("Información personal", {"fields": ("nombre", "rol", "sucursal", "puesto", "area")}),
         ("Permisos", {"fields": ("activo", "is_staff", "is_superuser", "groups", "user_permissions")}),
         ("Fechas importantes", {"fields": ("last_login",)}),
     )
@@ -22,7 +47,7 @@ class UsuarioAdmin(UserAdmin):
     add_fieldsets = (
         (None, {
             "classes": ("wide",),
-            "fields": ("correo", "nombre", "rol", "area", "puesto", "password1", "password2"),
+            "fields": ("correo", "nombre", "rol", "sucursal", "area", "puesto", "password1", "password2"),
         }),
     )
 

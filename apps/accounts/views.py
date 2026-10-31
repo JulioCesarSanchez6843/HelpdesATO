@@ -1,3 +1,5 @@
+import hashlib
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
@@ -28,6 +30,7 @@ from apps.tickets.models import ConfiguracionSistema, CorreoPendiente, Notificac
 from apps.tickets.views import _tickets_visibles
 
 from .decorators import admin_required
+from .utilidades import entero_positivo
 from .forms import (
     CambiarPasswordForm,
     FotoPerfilForm,
@@ -44,6 +47,17 @@ from .permisos import (
 )
 from apps.catalog.models import Sucursal
 
+LOGIN_MAX_INTENTOS = 5
+LOGIN_BLOQUEO_SEGUNDOS = 15 * 60
+
+
+def _clave_login(request, correo):
+    huella = hashlib.sha256(
+        f"{request.META.get('REMOTE_ADDR', '')}|{correo.lower()}".encode()
+    ).hexdigest()
+    return f"login-fallos:{huella}"
+
+
 def login_view(request):
     if request.user.is_authenticated:
         return redirect(PreferenciasUsuario.de(request.user).url_inicio)
@@ -52,12 +66,20 @@ def login_view(request):
     contexto = {"next": siguiente}
 
     if request.method == "POST":
+        correo = request.POST.get("correo", "").strip()
+        clave = _clave_login(request, correo)
+        if cache.get(clave, 0) >= LOGIN_MAX_INTENTOS:
+            contexto["error"] = (
+                "Demasiados intentos fallidos. Espera 15 minutos e inténtalo de nuevo."
+            )
+            return render(request, "accounts/login.html", contexto, status=429)
         user = authenticate(
             request,
-            username=request.POST.get("correo", "").strip(),
+            username=correo,
             password=request.POST.get("password", ""),
         )
         if user is not None:
+            cache.delete(clave)
             login(request, user)
             destino_seguro = url_has_allowed_host_and_scheme(
                 siguiente, allowed_hosts={request.get_host()},
@@ -66,6 +88,7 @@ def login_view(request):
             if siguiente and destino_seguro:
                 return redirect(siguiente)
             return redirect(PreferenciasUsuario.de(request.user).url_inicio)
+        cache.set(clave, cache.get(clave, 0) + 1, LOGIN_BLOQUEO_SEGUNDOS)
         contexto["error"] = "Correo o contraseña incorrectos."
 
     return render(request, "accounts/login.html", contexto)
@@ -83,8 +106,9 @@ def lista_usuarios(request):
     usuarios = _usuarios_gestionables(request.user)
     if q:
         usuarios = usuarios.filter(Q(nombre__icontains=q) | Q(correo__icontains=q))
-    if request.user.es_superadmin and sucursal.isdigit():
-        usuarios = usuarios.filter(sucursal_id=int(sucursal))
+    sucursal_id = entero_positivo(sucursal) if request.user.es_superadmin else None
+    if sucursal_id is not None:
+        usuarios = usuarios.filter(sucursal_id=sucursal_id)
     else:
         sucursal = ""
     return render(request, "accounts/usuarios.html", {
