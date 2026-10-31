@@ -3,6 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.dateparse import parse_date
+from apps.accounts.utilidades import entero_positivo
 from django.views.decorators.http import require_POST
 
 from django.db import transaction
@@ -60,6 +62,8 @@ def lista(request, clave):
     q = request.GET.get("q", "").strip()
     sucursal = request.GET.get("sucursal", "")
     uso = request.GET.get("uso", "")
+    desde = request.GET.get("desde", "")
+    hasta = request.GET.get("hasta", "")
 
     consulta = cfg["modelo"].objects.visibles_para(request.user)
 
@@ -75,8 +79,23 @@ def lista(request, clave):
         else:
             sucursal = ""
 
+    fecha_desde = parse_date(desde) if desde else None
+    fecha_hasta = parse_date(hasta) if hasta else None
+
+    if fecha_desde and fecha_hasta:
+        if fecha_desde > fecha_hasta:
+            fecha_desde, fecha_hasta = fecha_hasta, fecha_desde
+        consulta = consulta.filter(creado_en__date__range=(fecha_desde, fecha_hasta))
+    elif fecha_desde:
+        consulta = consulta.filter(creado_en__date=fecha_desde)
+        hasta = ""
+    else:
+        desde = ""
+        hasta = ""
+
     for rel in cfg["relaciones"]:
         consulta = consulta.annotate(**{f"n_{rel}": Count(rel, distinct=True)})
+
     registros = list(consulta)
     for registro in registros:
         registro.en_uso = sum(getattr(registro, f"n_{rel}") for rel in cfg["relaciones"])
@@ -94,6 +113,8 @@ def lista(request, clave):
         "q": q,
         "sucursal_sel": sucursal,
         "uso_sel": uso,
+        "desde": desde,
+        "hasta": hasta,
         "titulo": cfg["titulo"],
         "singular": cfg["singular"],
         "descripcion": cfg["descripcion"],

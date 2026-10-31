@@ -20,32 +20,70 @@
             >
         </div>
 
-        <select name="sucursal" class="form-select buscador-select {% if sucursal_sel %}activo{% endif %}" onchange="this.form.submit()">
-            <option value="">Sucursal</option>
-            <option value="general" {% if sucursal_sel == "general" %}selected{% endif %}>General</option>
-            {% if user.es_superadmin %}
-                {% for s in sucursales %}
-                <option value="{{ s.pk }}" {% if sucursal_sel == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.nombre }}</option>
-                {% endfor %}
-            {% elif user.sucursal_id %}
-                <option value="{{ user.sucursal_id }}" {% if sucursal_sel == user.sucursal_id|stringformat:"s" %}selected{% endif %}>{{ user.sucursal }}</option>
+        <button
+            type="button"
+            class="buscador-toggle {% if sucursal_sel or uso_sel or desde %}activo{% endif %}"
+            data-bs-toggle="collapse"
+            data-bs-target="#panelFiltros"
+            aria-expanded="{% if sucursal_sel or uso_sel or desde %}true{% else %}false{% endif %}"
+            aria-controls="panelFiltros"
+        >
+            <i class="bi bi-sliders"></i>
+            <span class="buscador-texto">Filtros</span>
+            {% if sucursal_sel or uso_sel or desde %}
+            <span class="buscador-punto"></span>
             {% endif %}
-        </select>
-
-        <select name="uso" class="form-select buscador-select {% if uso_sel %}activo{% endif %}" onchange="this.form.submit()">
-            <option value="">Uso</option>
-            <option value="en_uso" {% if uso_sel == "en_uso" %}selected{% endif %}>En uso</option>
-            <option value="sin_uso" {% if uso_sel == "sin_uso" %}selected{% endif %}>Sin uso</option>
-        </select>
+            <i class="bi bi-chevron-down buscador-flecha"></i>
+        </button>
 
         <a
             href="?"
-            class="buscador-limpiar {% if not q and not sucursal_sel and not uso_sel %}oculto{% endif %}"
+            class="buscador-limpiar {% if not q and not sucursal_sel and not uso_sel and not desde %}oculto{% endif %}"
             title="Limpiar filtros"
         >
             <i class="bi bi-eraser"></i>
         </a>
 
+    </div>
+
+    <div
+        id="panelFiltros"
+        class="collapse {% if sucursal_sel or uso_sel or desde %}show{% endif %}"
+    >
+        <div class="buscador-panel">
+
+            <div>
+                <label>Sucursal</label>
+                <select name="sucursal" class="form-select {% if sucursal_sel %}activo{% endif %}" onchange="this.form.submit()">
+                    <option value="">Todas</option>
+                    <option value="general" {% if sucursal_sel == "general" %}selected{% endif %}>General</option>
+                    {% if user.es_superadmin %}
+                        {% for s in sucursales %}
+                        <option value="{{ s.pk }}" {% if sucursal_sel == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.nombre }}</option>
+                        {% endfor %}
+                    {% elif user.sucursal_id %}
+                        <option value="{{ user.sucursal_id }}" {% if sucursal_sel == user.sucursal_id|stringformat:"s" %}selected{% endif %}>{{ user.sucursal }}</option>
+                    {% endif %}
+                </select>
+            </div>
+
+            <div>
+                <label>Uso</label>
+                <select name="uso" class="form-select {% if uso_sel %}activo{% endif %}" onchange="this.form.submit()">
+                    <option value="">Todos</option>
+                    <option value="en_uso" {% if uso_sel == "en_uso" %}selected{% endif %}>En uso</option>
+                    <option value="sin_uso" {% if uso_sel == "sin_uso" %}selected{% endif %}>Sin uso</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Fecha de creación</label>
+                <input type="text" class="form-control rango-fechas" placeholder="Un día o un rango">
+                <input type="hidden" name="desde" value="{{ desde }}">
+                <input type="hidden" name="hasta" value="{{ hasta }}">
+            </div>
+
+        </div>
     </div>
 
 </form>
@@ -68,6 +106,7 @@
                     <th>Nombre</th>
                     <th>Sucursal</th>
                     <th>En uso</th>
+                    <th>Creado</th>
                     <th class="text-end">Acciones</th>
                 </tr>
             </thead>
@@ -77,6 +116,7 @@
                     <td><span class="text-primary me-2">&#9679;</span>{{ registro.nombre }}</td>
                     <td>{{ registro.sucursal|default:"General" }}</td>
                     <td class="text-muted">{{ registro.en_uso }}</td>
+                    <td class="text-muted">{{ registro.creado_en|date:"d/m/Y" }}</td>
                     <td class="text-end">
                         {% if registro.editable %}
                         <button type="button" class="btn btn-sm btn-outline-secondary"
@@ -93,7 +133,7 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="4" class="text-center text-muted">No hay registros.</td></tr>
+                <tr><td colspan="5" class="text-center text-muted">No hay registros.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

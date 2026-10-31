@@ -2,6 +2,7 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Lower
+from django.utils import timezone
 
 
 class CatalogoQuerySet(models.QuerySet):
@@ -22,6 +23,7 @@ class CatalogoBase(models.Model):
         null=True,
         blank=True,
     )
+    creado_en = models.DateTimeField(default=timezone.now, editable=False)
 
     objects = CatalogoQuerySet.as_manager()
 
