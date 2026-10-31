@@ -1,85 +1,197 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>Usuarios</h3>
-    <a href="{% url 'nuevo_usuario' %}" class="btn btn-primary">+ Nuevo usuario</a>
+    <h3 class="mb-0">Usuarios</h3>
+    <a href="{% url 'nuevo_usuario' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Nuevo usuario
+    </a>
 </div>
 
-<form method="get" class="row g-2 mb-3">
-    <div class="col-md-4">
-        <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Buscar por nombre o correo...">
+<form method="get" class="buscador">
+
+    <div class="buscador-fila">
+
+        <div class="buscador-campo">
+            <i class="bi bi-search"></i>
+            <input
+                type="search"
+                name="q"
+                value="{{ q }}"
+                class="form-control"
+                placeholder="Buscar por nombre, correo, sucursal, área o puesto..."
+            >
+        </div>
+
+        <button
+            type="button"
+            class="buscador-toggle {% if rol_sel or estado_sel or sucursal_sel or area_sel or puesto_sel or desde or hasta %}activo{% endif %}"
+            data-bs-toggle="collapse"
+            data-bs-target="#panelFiltros"
+            aria-expanded="{% if rol_sel or estado_sel or sucursal_sel or area_sel or puesto_sel or desde or hasta %}true{% else %}false{% endif %}"
+            aria-controls="panelFiltros"
+        >
+            <i class="bi bi-sliders"></i>
+            <span class="buscador-texto">Filtros</span>
+            {% if rol_sel or estado_sel or sucursal_sel or area_sel or puesto_sel or desde or hasta %}
+            <span class="buscador-punto"></span>
+            {% endif %}
+            <i class="bi bi-chevron-down buscador-flecha"></i>
+        </button>
+
+        <a
+            href="?"
+            class="buscador-limpiar {% if not q and not rol_sel and not estado_sel and not sucursal_sel and not area_sel and not puesto_sel and not desde and not hasta %}oculto{% endif %}"
+            title="Limpiar filtros"
+        >
+            <i class="bi bi-eraser"></i>
+        </a>
+
     </div>
-    {% if user.es_superadmin %}
-    <div class="col-md-3">
-        <select name="sucursal" class="form-select" onchange="this.form.submit()">
-            <option value="">Todas las sucursales</option>
-            {% for s in sucursales %}
-            <option value="{{ s.pk }}" {% if sucursal_sel == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.nombre }}</option>
-            {% endfor %}
-        </select>
+
+    <div
+        id="panelFiltros"
+        class="collapse {% if rol_sel or estado_sel or sucursal_sel or area_sel or puesto_sel or desde or hasta %}show{% endif %}"
+    >
+        <div class="buscador-panel">
+
+            <div>
+                <label>Rol</label>
+                <select name="rol" class="form-select {% if rol_sel %}activo{% endif %}" onchange="this.form.submit()">
+                    <option value="">Todos</option>
+                    {% for valor, etiqueta in roles %}
+                    <option value="{{ valor }}" {% if rol_sel == valor %}selected{% endif %}>{{ etiqueta }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label>Estado</label>
+                <select name="estado" class="form-select {% if estado_sel %}activo{% endif %}" onchange="this.form.submit()">
+                    <option value="">Todos</option>
+                    <option value="activo" {% if estado_sel == "activo" %}selected{% endif %}>Activos</option>
+                    <option value="inactivo" {% if estado_sel == "inactivo" %}selected{% endif %}>Inactivos</option>
+                </select>
+            </div>
+
+            {% if user.es_superadmin %}
+            <div>
+                <label>Sucursal</label>
+                <select name="sucursal" class="form-select {% if sucursal_sel %}activo{% endif %}" onchange="this.form.submit()">
+                    <option value="">Todas</option>
+                    {% for s in sucursales %}
+                    <option value="{{ s.pk }}" {% if sucursal_sel == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <div>
+                <label>Área</label>
+                <select name="area" class="form-select {% if area_sel %}activo{% endif %}" onchange="this.form.submit()">
+                    <option value="">Todas</option>
+                    {% for a in areas %}
+                    <option value="{{ a.pk }}" {% if area_sel == a.pk|stringformat:"s" %}selected{% endif %}>{{ a.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label>Puesto</label>
+                <select name="puesto" class="form-select {% if puesto_sel %}activo{% endif %}" onchange="this.form.submit()">
+                    <option value="">Todos</option>
+                    {% for p in puestos %}
+                    <option value="{{ p.pk }}" {% if puesto_sel == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label>Fecha de creación</label>
+                <input type="text" class="form-control rango-fechas" placeholder="Un día o un rango">
+                <input type="hidden" name="desde" value="{{ desde }}">
+                <input type="hidden" name="hasta" value="{{ hasta }}">
+            </div>
+
+        </div>
     </div>
-    {% endif %}
+
 </form>
 
-<table class="table table-hover align-middle">
-    <thead>
-        <tr>
-            <th>Nombre</th>
-            <th>Correo</th>
-            <th>Rol</th>
-            <th>Área</th>
-            <th>Puesto</th>
-            <th>Estado</th>
-            <th>Creado</th>
-            <th class="text-end">Acciones</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for usuario in usuarios %}
-        <tr {% if not usuario.activo %}class="table-secondary text-muted"{% endif %}>
-            <td>
-                {% if usuario.activo %}
-                    <i class="bi bi-person-check-fill text-success me-1"></i>{{ usuario.nombre }}
-                {% else %}
-                    <i class="bi bi-person-slash me-1"></i><s>{{ usuario.nombre }}</s>
-                {% endif %}
-            </td>
-            <td>{{ usuario.correo }}</td>
-            <td>
-                {% if usuario.es_admin %}
-                    <span class="badge bg-primary">{{ usuario.get_rol_display }}</span>
-                {% else %}
-                    <span class="badge bg-secondary">{{ usuario.get_rol_display }}</span>
-                {% endif %}
-            </td>
-            <td>{{ usuario.sucursal|default:"—" }}</td>
-            <td>{{ usuario.area|default:"—" }}</td>
-            <td>{{ usuario.puesto|default:"—" }}</td>
-            <td>
-                {% if usuario.activo %}
-                    <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Activo</span>
-                {% else %}
-                    <span class="badge bg-danger"><i class="bi bi-slash-circle me-1"></i>Inactivo</span>
-                {% endif %}
-            </td>
-            <td>{{ usuario.creado_en|date:"d/m/Y" }}</td>
-            <td class="text-end">
-                <a href="{% url 'editar_usuario' usuario.pk %}" class="btn btn-sm btn-outline-secondary">Editar</a>
-                {% if usuario.pk != user.pk %}
-                <form method="post" action="{% url 'cambiar_estado_usuario' usuario.pk %}" class="d-inline">
-                    {% csrf_token %}
-                    {% if usuario.activo %}
-                        <button class="btn btn-sm btn-outline-danger">Desactivar</button>
-                    {% else %}
-                        <button class="btn btn-sm btn-outline-success">Activar</button>
-                    {% endif %}
-                </form>
-                {% endif %}
-            </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="8" class="text-center text-muted">No hay usuarios registrados.</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="card shadow-sm">
+
+    <div class="card-header bg-white">
+        {{ usuarios|length }} usuario{{ usuarios|length|pluralize }}
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Rol</th>
+                    <th>Sucursal</th>
+                    <th>Área</th>
+                    <th>Puesto</th>
+                    <th>Estado</th>
+                    <th>Creado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for usuario in usuarios %}
+                <tr {% if not usuario.activo %}class="table-secondary text-muted"{% endif %}>
+                    <td>
+                        {% if usuario.activo %}
+                            <i class="bi bi-person-check-fill text-success me-1"></i>{{ usuario.nombre }}
+                        {% else %}
+                            <i class="bi bi-person-slash me-1"></i><s>{{ usuario.nombre }}</s>
+                        {% endif %}
+                        <div class="small text-muted">{{ usuario.correo }}</div>
+                    </td>
+                    <td>
+                        {% if usuario.es_admin %}
+                            <span class="badge bg-primary">{{ usuario.get_rol_display }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ usuario.get_rol_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ usuario.sucursal|default:"—" }}</td>
+                    <td>{{ usuario.area|default:"—" }}</td>
+                    <td>{{ usuario.puesto|default:"—" }}</td>
+                    <td>
+                        {% if usuario.activo %}
+                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Activo</span>
+                        {% else %}
+                            <span class="badge bg-danger"><i class="bi bi-slash-circle me-1"></i>Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ usuario.creado_en|date:"d/m/Y" }}</td>
+                    <td class="text-end text-nowrap">
+                        <a href="{% url 'editar_usuario' usuario.pk %}" class="btn btn-sm btn-outline-secondary" title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        {% if usuario.pk != user.pk %}
+                        <form method="post" action="{% url 'cambiar_estado_usuario' usuario.pk %}" class="d-inline">
+                            {% csrf_token %}
+                            {% if usuario.activo %}
+                                <button class="btn btn-sm btn-outline-danger" title="Desactivar">
+                                    <i class="bi bi-person-slash"></i>
+                                </button>
+                            {% else %}
+                                <button class="btn btn-sm btn-outline-success" title="Activar">
+                                    <i class="bi bi-person-check"></i>
+                                </button>
+                            {% endif %}
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-center text-muted">No hay usuarios registrados.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+<form method="get" class="buscador">
+</div>
 {% endblock %}

@@ -153,55 +153,35 @@
 
 </div>
 
-<form method="get" class="row g-2 mb-3">
+<form method="get" class="buscador">
 
-    <div class="col-md-8">
+    <div class="buscador-fila">
 
-        <input
-            type="search"
-            name="q"
-            value="{{ q }}"
-            class="form-control"
-            placeholder="Buscar por título..."
-        >
+        <div class="buscador-campo">
+            <i class="bi bi-search"></i>
+            <input
+                type="search"
+                name="q"
+                value="{{ q }}"
+                class="form-control"
+                placeholder="Buscar por título, área o categoría..."
+            >
+        </div>
 
-    </div>
-
-    <div class="col-md-3">
-
-        <select
-            name="estado"
-            class="form-select"
-            onchange="this.form.submit()"
-        >
-
-            <option value="">
-                Todos los estados
-            </option>
-
+        <select name="estado" class="form-select buscador-select {% if estado_sel %}activo{% endif %}" onchange="this.form.submit()">
+            <option value="">Estado</option>
             {% for valor, etiqueta in estados %}
-
-                <option
-                    value="{{ valor }}"
-                    {% if estado_sel == valor %}selected{% endif %}
-                >
-                    {{ etiqueta }}
-                </option>
-
+            <option value="{{ valor }}" {% if estado_sel == valor %}selected{% endif %}>{{ etiqueta }}</option>
             {% endfor %}
-
         </select>
 
-    </div>
-
-    <div class="col-md-1">
-
-        <button
-            type="submit"
-            class="btn btn-outline-primary w-100"
+        <a
+            href="?"
+            class="buscador-limpiar {% if not q and not estado_sel %}oculto{% endif %}"
+            title="Limpiar filtros"
         >
-            Buscar
-        </button>
+            <i class="bi bi-eraser"></i>
+        </a>
 
     </div>
 

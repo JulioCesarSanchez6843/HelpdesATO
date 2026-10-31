@@ -22,6 +22,8 @@ from django.contrib.auth.decorators import login_required
 from datetime import timedelta
 
 from django.utils import timezone
+from django.utils import timezone
+from django.utils.dateparse import parse_date
 
 from apps.actividad.models import Evento
 from apps.actividad.registro import registrar as registrar_evento
@@ -45,7 +47,7 @@ from .permisos import (
     quienes_pueden_cambiar,
     usuarios_gestionables as _usuarios_gestionables,
 )
-from apps.catalog.models import Sucursal
+from apps.catalog.models import Area, Puesto, Sucursal
 
 LOGIN_MAX_INTENTOS = 5
 LOGIN_BLOQUEO_SEGUNDOS = 15 * 60
@@ -102,19 +104,84 @@ def logout_view(request):
 @admin_required
 def lista_usuarios(request):
     q = request.GET.get("q", "").strip()
+    rol = request.GET.get("rol", "")
+    estado = request.GET.get("estado", "")
+    area = request.GET.get("area", "")
+    puesto = request.GET.get("puesto", "")
     sucursal = request.GET.get("sucursal", "")
-    usuarios = _usuarios_gestionables(request.user)
+    desde = request.GET.get("desde", "")
+    hasta = request.GET.get("hasta", "")
+
+    usuarios = _usuarios_gestionables(request.user).select_related(
+        "sucursal", "area", "puesto"
+    )
+
     if q:
-        usuarios = usuarios.filter(Q(nombre__icontains=q) | Q(correo__icontains=q))
+        usuarios = usuarios.filter(
+            Q(nombre__icontains=q)
+            | Q(correo__icontains=q)
+            | Q(sucursal__nombre__icontains=q)
+            | Q(area__nombre__icontains=q)
+            | Q(puesto__nombre__icontains=q)
+        )
+
+    if rol in {valor for valor, _ in Usuario.Rol.choices}:
+        usuarios = usuarios.filter(rol=rol)
+    else:
+        rol = ""
+
+    if estado == "activo":
+        usuarios = usuarios.filter(activo=True)
+    elif estado == "inactivo":
+        usuarios = usuarios.filter(activo=False)
+    else:
+        estado = ""
+
+    area_id = entero_positivo(area)
+    if area_id is not None:
+        usuarios = usuarios.filter(area_id=area_id)
+    else:
+        area = ""
+
+    puesto_id = entero_positivo(puesto)
+    if puesto_id is not None:
+        usuarios = usuarios.filter(puesto_id=puesto_id)
+    else:
+        puesto = ""
+
     sucursal_id = entero_positivo(sucursal) if request.user.es_superadmin else None
     if sucursal_id is not None:
         usuarios = usuarios.filter(sucursal_id=sucursal_id)
     else:
         sucursal = ""
+
+    fecha_desde = parse_date(desde) if desde else None
+    fecha_hasta = parse_date(hasta) if hasta else None
+
+    if fecha_desde and fecha_hasta:
+        if fecha_desde > fecha_hasta:
+            fecha_desde, fecha_hasta = fecha_hasta, fecha_desde
+        usuarios = usuarios.filter(creado_en__date__range=(fecha_desde, fecha_hasta))
+    elif fecha_desde:
+        usuarios = usuarios.filter(creado_en__date=fecha_desde)
+        hasta = ""
+    else:
+        desde = ""
+        hasta = ""
+
     return render(request, "accounts/usuarios.html", {
         "usuarios": usuarios,
         "q": q,
+        "rol_sel": rol,
+        "estado_sel": estado,
+        "area_sel": area,
+        "puesto_sel": puesto,
         "sucursal_sel": sucursal,
+        "desde": desde,
+        "hasta": hasta,
+        "roles": Usuario.Rol.choices,
+        "areas": Area.objects.visibles_para(request.user),
+        "puestos": Puesto.objects.visibles_para(request.user),
         "sucursales": Sucursal.objects.all(),
     })
 

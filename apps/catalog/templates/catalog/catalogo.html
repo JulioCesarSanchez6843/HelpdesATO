@@ -5,6 +5,51 @@
     <p class="text-muted mb-0">{{ descripcion }}</p>
 </div>
 
+<form method="get" class="buscador">
+
+    <div class="buscador-fila">
+
+        <div class="buscador-campo">
+            <i class="bi bi-search"></i>
+            <input
+                type="search"
+                name="q"
+                value="{{ q }}"
+                class="form-control"
+                placeholder="Buscar por nombre..."
+            >
+        </div>
+
+        <select name="sucursal" class="form-select buscador-select {% if sucursal_sel %}activo{% endif %}" onchange="this.form.submit()">
+            <option value="">Sucursal</option>
+            <option value="general" {% if sucursal_sel == "general" %}selected{% endif %}>General</option>
+            {% if user.es_superadmin %}
+                {% for s in sucursales %}
+                <option value="{{ s.pk }}" {% if sucursal_sel == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.nombre }}</option>
+                {% endfor %}
+            {% elif user.sucursal_id %}
+                <option value="{{ user.sucursal_id }}" {% if sucursal_sel == user.sucursal_id|stringformat:"s" %}selected{% endif %}>{{ user.sucursal }}</option>
+            {% endif %}
+        </select>
+
+        <select name="uso" class="form-select buscador-select {% if uso_sel %}activo{% endif %}" onchange="this.form.submit()">
+            <option value="">Uso</option>
+            <option value="en_uso" {% if uso_sel == "en_uso" %}selected{% endif %}>En uso</option>
+            <option value="sin_uso" {% if uso_sel == "sin_uso" %}selected{% endif %}>Sin uso</option>
+        </select>
+
+        <a
+            href="?"
+            class="buscador-limpiar {% if not q and not sucursal_sel and not uso_sel %}oculto{% endif %}"
+            title="Limpiar filtros"
+        >
+            <i class="bi bi-eraser"></i>
+        </a>
+
+    </div>
+
+</form>
+
 <div class="card shadow-sm">
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">

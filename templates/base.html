@@ -8,6 +8,7 @@
     <link rel="icon" type="image/png" href="{% static 'img/favicon_tollocan.png' %}?v=2">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@700&display=swap" rel="stylesheet">
@@ -135,6 +136,57 @@
     {% endif %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/es.js"></script>
+    <script>
+        (function () {
+            if (typeof flatpickr === "undefined") return;
+
+            document.querySelectorAll("input.rango-fechas").forEach(function (campo) {
+                var formulario = campo.form;
+                var desde = formulario.querySelector("input[name='desde']");
+                var hasta = formulario.querySelector("input[name='hasta']");
+                var inicial = [];
+                if (desde.value) inicial.push(desde.value);
+                if (hasta.value) inicial.push(hasta.value);
+                var desdeAnterior = desde.value;
+                var hastaAnterior = hasta.value;
+
+                flatpickr(campo, {
+                    mode: "range",
+                    locale: "es",
+                    dateFormat: "Y-m-d",
+                    altInput: true,
+                    altFormat: "d M Y",
+                    altInputClass: "form-control",
+                    defaultDate: inicial,
+                    onReady: function (fechas, texto, instancia) {
+                        var boton = document.createElement("div");
+                        boton.className = "flatpickr-quitar";
+                        boton.textContent = "Quitar fecha";
+                        boton.addEventListener("click", function () {
+                            instancia.clear();
+                            instancia.close();
+                        });
+                        instancia.calendarContainer.appendChild(boton);
+                    },
+                    onChange: function (fechas, texto, instancia) {
+                        instancia.set("minDate", fechas.length === 1 ? fechas[0] : null);
+                    },
+                    onClose: function (fechas, texto, instancia) {
+                        instancia.set("minDate", null);
+                        desde.value = fechas[0] ? instancia.formatDate(fechas[0], "Y-m-d") : "";
+                        hasta.value = fechas[1] ? instancia.formatDate(fechas[1], "Y-m-d") : "";
+                        if (desde.value !== desdeAnterior || hasta.value !== hastaAnterior) {
+                            formulario.submit();
+                        }
+                    }
+                });
+            });
+        })();
+    </script>
+
     <script>
         (function () {
             var raiz = document.documentElement;
@@ -146,6 +198,88 @@
             });
             fondo.addEventListener("click", function () {
                 raiz.classList.remove("menu-movil-abierto");
+            });
+        })();
+    </script>
+    <script>
+        (function () {
+            var campos = document.querySelectorAll(
+                "form.buscador input[type='search'], form.buscador input[name='ticket']"
+            );
+            if (!campos.length) return;
+
+            var temporizador = null;
+            var controlador = null;
+
+            function buscar(formulario) {
+                var datos = new URLSearchParams(new FormData(formulario));
+                Array.from(datos.keys()).forEach(function (clave) {
+                    if (datos.get(clave) === "") datos.delete(clave);
+                });
+                datos.delete("page");
+
+                var consulta = datos.toString();
+                var base = formulario.getAttribute("action") || window.location.pathname;
+                var url = consulta ? base + "?" + consulta : base;
+
+                if (controlador) controlador.abort();
+                controlador = new AbortController();
+
+                fetch(url, {
+                    signal: controlador.signal,
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                })
+                    .then(function (respuesta) {
+                        return respuesta.text();
+                    })
+                    .then(function (html) {
+                        var documento = new DOMParser().parseFromString(html, "text/html");
+                        var nuevo = documento.querySelector("form.buscador");
+                        if (!nuevo) {
+                            window.location.href = url;
+                            return;
+                        }
+
+                        var contenedor = formulario.parentElement;
+                        while (formulario.nextSibling) {
+                            contenedor.removeChild(formulario.nextSibling);
+                        }
+                        var siguiente = nuevo.nextSibling;
+                        while (siguiente) {
+                            contenedor.appendChild(document.importNode(siguiente, true));
+                            siguiente = siguiente.nextSibling;
+                        }
+
+                        var limpiarActual = formulario.querySelector(".buscador-limpiar");
+                        var limpiarNuevo = nuevo.querySelector(".buscador-limpiar");
+                        if (limpiarActual && limpiarNuevo) {
+                            limpiarActual.className = limpiarNuevo.className;
+                        }
+
+                        window.history.replaceState(null, "", url);
+                    })
+                    .catch(function (error) {
+                        if (error.name !== "AbortError") {
+                            window.location.href = url;
+                        }
+                    });
+            }
+
+            campos.forEach(function (campo) {
+                campo.addEventListener("input", function () {
+                    clearTimeout(temporizador);
+                    temporizador = setTimeout(function () {
+                        buscar(campo.form);
+                    }, 300);
+                });
+
+                campo.addEventListener("keydown", function (evento) {
+                    if (evento.key === "Enter") {
+                        evento.preventDefault();
+                        clearTimeout(temporizador);
+                        buscar(campo.form);
+                    }
+                });
             });
         })();
     </script>

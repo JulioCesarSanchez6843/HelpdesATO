@@ -6,7 +6,7 @@ from django.db import transaction
 from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
 from django.contrib.auth import login
 
@@ -68,14 +68,27 @@ def lista_tickets(request):
     area = request.GET.get("area", "")
     categoria = request.GET.get("categoria", "")
     sucursal = request.GET.get("sucursal", "")
+    desde = request.GET.get("desde", "")
+    hasta = request.GET.get("hasta", "")
 
     tickets = base
 
     if q:
-        filtro = Q(titulo__icontains=q)
+        filtro = (
+            Q(titulo__icontains=q)
+            | Q(area__nombre__icontains=q)
+            | Q(categoria__nombre__icontains=q)
+        )
+
+        if q.lstrip("#").isdigit():
+            filtro |= Q(pk=int(q.lstrip("#")))
 
         if es_personal:
-            filtro |= Q(creado_por__nombre__icontains=q)
+            filtro |= (
+                Q(creado_por__nombre__icontains=q)
+                | Q(sucursal__nombre__icontains=q)
+                | Q(asignado_a__nombre__icontains=q)
+            )
 
         tickets = tickets.filter(filtro)
 
@@ -102,6 +115,20 @@ def lista_tickets(request):
     else:
         sucursal = ""
 
+    fecha_desde = parse_date(desde) if desde else None
+    fecha_hasta = parse_date(hasta) if hasta else None
+
+    if fecha_desde and fecha_hasta:
+        if fecha_desde > fecha_hasta:
+            fecha_desde, fecha_hasta = fecha_hasta, fecha_desde
+        tickets = tickets.filter(creado_en__date__range=(fecha_desde, fecha_hasta))
+    elif fecha_desde:
+        tickets = tickets.filter(creado_en__date=fecha_desde)
+        hasta = ""
+    else:
+        desde = ""
+        hasta = ""
+
     pagina = Paginator(tickets, TICKETS_POR_PAGINA).get_page(request.GET.get("page"))
 
     parametros = request.GET.copy()
@@ -115,6 +142,10 @@ def lista_tickets(request):
         "area_sel": area,
         "categoria_sel": categoria,
         "sucursal_sel": sucursal,
+        "desde": desde,
+        "hasta": hasta,
+        "desde": desde,
+        "hasta": hasta,
         "estados": Ticket.Estado.choices,
         "querystring": parametros.urlencode(),
     }

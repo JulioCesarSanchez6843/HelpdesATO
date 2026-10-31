@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST
 from django.db import transaction
 
 from apps.accounts.decorators import admin_required, superadmin_required
+from apps.accounts.utilidades import entero_positivo
 
 from apps.accounts.models import Usuario
 from apps.actividad.models import Evento
@@ -56,7 +57,24 @@ def lista(request, clave):
             messages.error(request, _errores(form))
         return redirect(f"lista_{clave}")
 
+    q = request.GET.get("q", "").strip()
+    sucursal = request.GET.get("sucursal", "")
+    uso = request.GET.get("uso", "")
+
     consulta = cfg["modelo"].objects.visibles_para(request.user)
+
+    if q:
+        consulta = consulta.filter(nombre__icontains=q)
+
+    if sucursal == "general":
+        consulta = consulta.filter(sucursal__isnull=True)
+    else:
+        sucursal_id = entero_positivo(sucursal)
+        if sucursal_id is not None:
+            consulta = consulta.filter(sucursal_id=sucursal_id)
+        else:
+            sucursal = ""
+
     for rel in cfg["relaciones"]:
         consulta = consulta.annotate(**{f"n_{rel}": Count(rel, distinct=True)})
     registros = list(consulta)
@@ -64,8 +82,18 @@ def lista(request, clave):
         registro.en_uso = sum(getattr(registro, f"n_{rel}") for rel in cfg["relaciones"])
         registro.editable = _puede_modificar(request.user, registro)
 
+    if uso == "en_uso":
+        registros = [r for r in registros if r.en_uso]
+    elif uso == "sin_uso":
+        registros = [r for r in registros if not r.en_uso]
+    else:
+        uso = ""
+
     return render(request, "catalog/catalogo.html", {
         "registros": registros,
+        "q": q,
+        "sucursal_sel": sucursal,
+        "uso_sel": uso,
         "titulo": cfg["titulo"],
         "singular": cfg["singular"],
         "descripcion": cfg["descripcion"],
@@ -74,7 +102,6 @@ def lista(request, clave):
         "url_editar": f"editar_{clave}",
         "url_eliminar": f"eliminar_{clave}",
     })
-
 
 @admin_required
 @require_POST

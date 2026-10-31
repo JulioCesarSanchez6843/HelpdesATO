@@ -153,124 +153,103 @@
 
 </div>
 
-<form
-    method="get"
-    class="row g-2 mb-3"
->
+<form method="get" class="buscador">
 
-    <div class="col-md-5">
+    <div class="buscador-fila">
 
-        <input
-            type="search"
-            name="q"
-            value="{{ q }}"
-            class="form-control"
-            placeholder="Buscar por título o usuario..."
-        >
-
-    </div>
-
-    <div class="col-md-2">
-
-        <select
-            name="estado"
-            class="form-select"
-            onchange="this.form.submit()"
-        >
-
-            <option value="">
-                Todos los estados
-            </option>
-
-            {% for valor, etiqueta in estados %}
-
-                <option
-                    value="{{ valor }}"
-                    {% if estado_sel == valor %}selected{% endif %}
-                >
-                    {{ etiqueta }}
-                </option>
-
-            {% endfor %}
-
-        </select>
-
-    </div>
-
-    {% if user.es_superadmin %}
-    <div class="col-md-2">
-        <select name="sucursal" class="form-select" onchange="this.form.submit()">
-            <option value="">Todas las sucursales</option>
-            {% for s in sucursales %}
-            <option value="{{ s.pk }}" {% if sucursal_sel == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.nombre }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    {% endif %}
-
-    <div class="col-md-2">
-
-        <select
-            name="area"
-            class="form-select"
-            onchange="this.form.submit()"
-        >
-
-            <option value="">
-                Todas las áreas
-            </option>
-
-            {% for a in areas %}
-
-                <option
-                    value="{{ a.pk }}"
-                    {% if area_sel == a.pk|stringformat:"s" %}selected{% endif %}
-                >
-                    {{ a.nombre }}
-                </option>
-
-            {% endfor %}
-
-        </select>
-
-    </div>
-
-    <div class="col-md-2">
-
-        <select
-            name="categoria"
-            class="form-select"
-            onchange="this.form.submit()"
-        >
-
-            <option value="">
-                Todas las categorías
-            </option>
-
-            {% for c in categorias %}
-
-                <option
-                    value="{{ c.pk }}"
-                    {% if categoria_sel == c.pk|stringformat:"s" %}selected{% endif %}
-                >
-                    {{ c.nombre }}
-                </option>
-
-            {% endfor %}
-
-        </select>
-
-    </div>
-
-    <div class="col-md-1">
+        <div class="buscador-campo">
+            <i class="bi bi-search"></i>
+            <input
+                type="search"
+                name="q"
+                value="{{ q }}"
+                class="form-control"
+                placeholder="Buscar por título, usuario, sucursal, área..."
+            >
+        </div>
 
         <button
-            type="submit"
-            class="btn btn-outline-primary w-100"
+            type="button"
+            class="buscador-toggle {% if estado_sel or sucursal_sel or area_sel or categoria_sel or desde %}activo{% endif %}"
+            data-bs-toggle="collapse"
+            data-bs-target="#panelFiltros"
+            aria-expanded="{% if estado_sel or sucursal_sel or area_sel or categoria_sel or desde %}true{% else %}false{% endif %}"
+            aria-controls="panelFiltros"
         >
-            Buscar
+            <i class="bi bi-sliders"></i>
+            <span class="buscador-texto">Filtros</span>
+            {% if estado_sel or sucursal_sel or area_sel or categoria_sel or desde %}
+            <span class="buscador-punto"></span>
+            {% endif %}
+            <i class="bi bi-chevron-down buscador-flecha"></i>
         </button>
 
+        <a
+            href="?"
+            class="buscador-limpiar {% if not q and not estado_sel and not sucursal_sel and not area_sel and not categoria_sel and not desde %}oculto{% endif %}"
+            title="Limpiar filtros"
+        >
+            <i class="bi bi-eraser"></i>
+        </a>
+
+    </div>
+
+    <div
+        id="panelFiltros"
+        class="collapse {% if estado_sel or sucursal_sel or area_sel or categoria_sel or desde %}show{% endif %}"
+    >
+        <div class="buscador-panel">
+
+            <div>
+                <label>Estado</label>
+                <select name="estado" class="form-select {% if estado_sel %}activo{% endif %}" onchange="this.form.submit()">
+                    <option value="">Todos</option>
+                    {% for valor, etiqueta in estados %}
+                    <option value="{{ valor }}" {% if estado_sel == valor %}selected{% endif %}>{{ etiqueta }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            {% if user.es_superadmin %}
+            <div>
+                <label>Sucursal</label>
+                <select name="sucursal" class="form-select {% if sucursal_sel %}activo{% endif %}" onchange="this.form.submit()">
+                    <option value="">Todas</option>
+                    {% for s in sucursales %}
+                    <option value="{{ s.pk }}" {% if sucursal_sel == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <div>
+                <label>Área</label>
+                <select name="area" class="form-select {% if area_sel %}activo{% endif %}" onchange="this.form.submit()">
+                    <option value="">Todas</option>
+                    {% for a in areas %}
+                    <option value="{{ a.pk }}" {% if area_sel == a.pk|stringformat:"s" %}selected{% endif %}>{{ a.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label>Categoría</label>
+                <select name="categoria" class="form-select {% if categoria_sel %}activo{% endif %}" onchange="this.form.submit()">
+                    <option value="">Todas</option>
+                    {% for c in categorias %}
+                    <option value="{{ c.pk }}" {% if categoria_sel == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label>Fecha de creación</label>
+                <input type="text" class="form-control rango-fechas" placeholder="Un día o un rango">
+                <input type="hidden" name="desde" value="{{ desde }}">
+                <input type="hidden" name="hasta" value="{{ hasta }}">
+            </div>
+
+        </div>
     </div>
 
 </form>
@@ -381,7 +360,7 @@
                 <tr>
 
                     <td
-                        colspan="7"
+                        colspan="10"
                         class="text-center text-muted"
                     >
                         No hay tickets con esos filtros.
