@@ -75,6 +75,16 @@ class Ticket(models.Model):
     nota_resolucion = models.TextField(blank=True)
     justificacion_cierre = models.TextField(blank=True)
 
+    motivo_escalada = models.TextField(blank=True)
+    escalado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tickets_escalados",
+    )
+    escalado_en = models.DateTimeField(null=True, blank=True)
+
     prioridad = models.CharField(
         max_length=10, choices=Prioridad.choices, blank=True
     )
@@ -168,6 +178,7 @@ class Historial(models.Model):
         CATEGORIA = "CATEGORIA", "Cambio de categoría"
         ASIGNACION = "ASIGNACION", "Asignación"
         PRIORIDAD = "PRIORIDAD", "Cambio de prioridad"
+        ESCALADO = "ESCALADO", "Escalado"
 
     ticket = models.ForeignKey(
         Ticket,
@@ -213,6 +224,7 @@ class Notificacion(models.Model):
         SOLICITUD_PASSWORD = "SOLICITUD_PASSWORD", "Solicitud de contraseña"
         COMENTARIO = "COMENTARIO", "Nuevo comentario"
         ESPERA_MATERIALES = "ESPERA_MATERIALES", "En espera de materiales"
+        TICKET_ESCALADO = "TICKET_ESCALADO", "Ticket escalado"
 
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,

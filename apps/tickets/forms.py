@@ -1,5 +1,6 @@
 from django import forms
 from django.conf import settings
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.accounts.forms import BootstrapFormMixin
@@ -255,7 +256,7 @@ class AsignarTicketForm(BootstrapFormMixin, forms.Form):
     prioridad = forms.ChoiceField(
         label="Prioridad (SLA)",
         choices=[("", "Elige…")] + Ticket.Prioridad.choices,
-        required=False,
+        required=True,
     )
 
     def __init__(self, *args, ticket, **kwargs):
@@ -280,6 +281,42 @@ class AsignarTicketForm(BootstrapFormMixin, forms.Form):
         ):
             self.add_error("prioridad", "Elige la prioridad al asignar el ticket.")
         return datos
+
+class EscalarTicketForm(BootstrapFormMixin, forms.Form):
+    destino = forms.ModelChoiceField(
+        label="Escalar a",
+        queryset=Usuario.objects.none(),
+        empty_label="Elige…",
+    )
+    motivo = forms.CharField(
+        label="Motivo de la escalada",
+        min_length=10,
+        max_length=1000,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
+    prioridad = forms.ChoiceField(
+        label="Prioridad (SLA)",
+        choices=[("", "Elige…")] + Ticket.Prioridad.choices,
+        required=True,
+    )
+
+    field_order = ["destino", "prioridad", "motivo"]
+
+    def __init__(self, *args, ticket, actor, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ticket = ticket
+        self.fields["prioridad"].initial = ticket.prioridad
+        campo = self.fields["destino"]
+        campo.queryset = (
+            Usuario.objects.filter(activo=True)
+            .filter(Q(rol=Usuario.Rol.SUPERADMIN) | Q(is_superuser=True))
+            .exclude(pk=actor.pk)
+            .distinct()
+        )
+        campo.label_from_instance = lambda u: f"{u.nombre} ({u.get_rol_display()})"
+
+    def clean_motivo(self):
+        return self.cleaned_data["motivo"].strip()
 
 class ConfiguracionSistemaForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:

@@ -14,7 +14,12 @@ from apps.accounts.decorators import admin_required, personal_required
 from apps.catalog.models import Area, Categoria, Sucursal
 
 from . import acceso, services
-from .forms import AsignarTicketForm, TicketForm, TicketGestionForm
+from .forms import (
+    AsignarTicketForm,
+    EscalarTicketForm,
+    TicketForm,
+    TicketGestionForm,
+)
 from .imagenes import ImagenInvalida
 from .models import AdjuntoTicket, Ticket
 
@@ -193,6 +198,15 @@ def detalle_ticket(request, pk):
             "form_asignar": (
                 AsignarTicketForm(ticket=ticket) if request.user.es_admin else None
             ),
+            "form_escalar": (
+                EscalarTicketForm(ticket=ticket, actor=request.user)
+                if (
+                    request.user.es_encargado
+                    and not request.user.es_superadmin
+                    and ticket.estado != Ticket.Estado.CERRADO
+                )
+                else None
+            ),
             "puede_tomar": (
                 es_personal
                 and ticket.asignado_a_id is None
@@ -222,6 +236,10 @@ def comentar_ticket(request, pk):
 
 @login_required
 def nuevo_ticket(request):
+    if request.user.es_personal:
+        messages.error(request, "Solo los usuarios pueden crear tickets.")
+        return redirect("lista_tickets")
+
     if request.method == "POST":
         form = TicketForm(request.POST, request.FILES)
 
@@ -474,6 +492,39 @@ def asignar_ticket(request, pk):
                 if destino != ticket.asignado_a:
                     services.asignar_ticket(ticket, request.user, destino)
             messages.success(request, "Ticket actualizado.")
+
+    return redirect("detalle_ticket", pk=pk)
+
+@personal_required
+@require_POST
+def escalar_ticket(request, pk):
+    get_object_or_404(_tickets_visibles(request.user), pk=pk)
+
+    with transaction.atomic():
+        ticket = get_object_or_404(Ticket.objects.select_for_update(), pk=pk)
+
+        if not request.user.es_encargado or request.user.es_superadmin:
+            messages.error(request, "Solo un encargado puede escalar tickets.")
+        elif ticket.estado == Ticket.Estado.CERRADO:
+            messages.error(request, "El ticket está cerrado.")
+        else:
+            form = EscalarTicketForm(
+                request.POST, ticket=ticket, actor=request.user
+            )
+            if form.is_valid():
+                services.escalar_ticket(
+                    ticket,
+                    request.user,
+                    form.cleaned_data["destino"],
+                    form.cleaned_data["motivo"],
+                    form.cleaned_data["prioridad"],
+                )
+                messages.success(request, "Ticket escalado.")
+            else:
+                mensaje = " ".join(
+                    e for errores in form.errors.values() for e in errores
+                )
+                messages.error(request, mensaje or "Revisa los datos de la escalada.")
 
     return redirect("detalle_ticket", pk=pk)
 

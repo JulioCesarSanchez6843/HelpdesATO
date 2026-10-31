@@ -19,83 +19,23 @@
 
 </div>
 
-<div class="row">
+<style>
+.panel-acciones .form-text { display: none; }
+.panel-acciones .mb-3:focus-within .form-text { display: block; }
+.panel-acciones .nav-link { padding: .4rem .5rem; }
+</style>
 
-    <div class="col-md-7">
+<div class="row g-3">
 
-        <div class="card mb-3">
+    <div class="col-lg-8">
 
+        <div class="card shadow-sm border-0 mb-3">
             <div class="card-body">
-
                 <h5 class="card-title">Descripción</h5>
-
                 <p class="card-text">{{ ticket.descripcion|linebreaksbr }}</p>
 
-                <ul class="list-unstyled small text-muted mb-0">
-
-                    <li><strong>Sucursal:</strong> {{ ticket.sucursal|default:"—" }}</li>
-
-                    <li><strong>Área:</strong> {{ ticket.area|default:"—" }}</li>
-
-                    <li>
-                        <strong>Asignado a:</strong>
-                        {{ ticket.asignado_a|default:"Sin asignar" }}
-                    </li>
-                    {% if form_gestion %}
-                        <li>
-                            <strong>Prioridad:</strong>
-                            {% include "tickets/_prioridad_badge.html" %}
-                            {% if ticket.sla_vence_en %}
-                                · vence el {{ ticket.sla_vence_en|date:"d/m/Y H:i" }}
-                                {% if ticket.sla_vencido %}
-                                    <span class="badge bg-danger">SLA vencido</span>
-                                {% endif %}
-                            {% endif %}
-                        </li>
-                    {% endif %}
-
-                    {% if ticket.resuelto_por %}
-                        <li>
-                            <strong>Resuelto por:</strong>
-                            {{ ticket.resuelto_por }}
-                        </li>
-                    {% endif %}
-
-                    {% if ticket.numero_serie %}
-                        <li>
-                            <strong>Número de serie / Service Tag:</strong>
-                            {{ ticket.numero_serie }}
-                        </li>
-                    {% endif %}
-
-                    <li>
-                        <strong>Creado por:</strong>
-                        {{ ticket.creado_por }}
-                        el {{ ticket.creado_en|date:"d/m/Y H:i" }}
-                    </li>
-
-                    {% if ticket.cerrado_en %}
-                        <li>
-                            <strong>Cerrado el:</strong>
-                            {{ ticket.cerrado_en|date:"d/m/Y H:i" }}
-                        </li>
-                    {% endif %}
-
-                </ul>
-
-            </div>
-
-        </div>
-
-        {% if adjuntos %}
-
-            <div class="card mb-3">
-
-                <div class="card-body">
-
-                    <h6 class="card-title">Imágenes adjuntas</h6>
-
-                    <div class="d-flex flex-wrap gap-2">
+                {% if adjuntos %}
+                    <div class="d-flex flex-wrap gap-2 mt-3">
                         {% for adjunto in adjuntos %}
                             <button
                                 type="button"
@@ -115,11 +55,11 @@
                             </button>
                         {% endfor %}
                     </div>
-
-                </div>
-
+                {% endif %}
             </div>
+        </div>
 
+        {% if adjuntos %}
             <div class="modal fade" id="modalImagen" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content bg-dark border-0">
@@ -152,33 +92,40 @@
                 });
             })();
             </script>
+        {% endif %}
 
+        {% if form_gestion and ticket.motivo_escalada %}
+            <div class="card border-warning shadow-sm mb-3">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-arrow-up-circle me-1"></i>Ticket escalado
+                    </h6>
+                    <p class="card-text mb-1">{{ ticket.motivo_escalada|linebreaksbr }}</p>
+                    <small class="text-muted">
+                        Por {{ ticket.escalado_por|default:"—" }}
+                        el {{ ticket.escalado_en|date:"d/m/Y H:i" }}
+                    </small>
+                </div>
+            </div>
         {% endif %}
 
         {% if ticket.estado == "POR_CONFIRMAR" or ticket.estado == "CERRADO" %}
             {% if ticket.nota_resolucion %}
-
-                <div class="card border-success mb-3">
-
+                <div class="card border-success shadow-sm mb-3">
                     <div class="card-body">
-
-                        <h6 class="card-title text-success">Nota de resolución</h6>
-
+                        <h6 class="card-title text-success">
+                            <i class="bi bi-check-circle me-1"></i>Nota de resolución
+                        </h6>
                         <p class="card-text mb-0">{{ ticket.nota_resolucion|linebreaksbr }}</p>
-
                     </div>
-
                 </div>
-
             {% endif %}
         {% endif %}
 
         {% if puede_responder_cierre %}
 
-            <div class="card border-info mb-3">
-
+            <div class="card border-info shadow-sm mb-3">
                 <div class="card-body">
-
                     <h5 class="card-title">¿Quedó resuelto tu problema?</h5>
 
                     <p class="text-muted">
@@ -208,9 +155,7 @@
                             No está resuelto — reabrir
                         </button>
                     </form>
-
                 </div>
-
             </div>
 
         {% elif ticket.estado == "POR_CONFIRMAR" %}
@@ -230,7 +175,7 @@
         {% endif %}
 
         {% if puede_reabrir %}
-            <div class="card border-warning mb-3">
+            <div class="card border-warning shadow-sm mb-3">
                 <div class="card-body">
                     <h5 class="card-title">¿Sigue el problema?</h5>
                     <p class="text-muted">
@@ -260,166 +205,192 @@
             </div>
         {% endif %}
 
-        <h5>Conversación</h5>
+        {% if form_gestion %}
+            {% include "tickets/_conversacion.html" %}
+        {% endif %}
 
-        <div class="card mb-3">
-            <div class="card-body">
-                {% for comentario in comentarios %}
-                    <div class="border-bottom pb-2 mb-2{% if comentario.interno %} bg-warning-subtle rounded p-2{% endif %}">
-                        <div class="d-flex justify-content-between">
-                            <strong>
-                                {{ comentario.autor.nombre }}
-                                {% if comentario.autor_id == ticket.creado_por_id %}
-                                    <span class="badge bg-secondary">Solicitante</span>
-                                {% endif %}
-                                {% if comentario.interno %}
-                                    <span class="badge bg-warning text-dark">Nota interna</span>
-                                {% endif %}
-                            </strong>
-                            <small class="text-muted">{{ comentario.creado_en|date:"d/m/Y H:i" }}</small>
-                        </div>
-                        <div>{{ comentario.contenido|linebreaksbr }}</div>
-                    </div>
-                {% empty %}
-                    <p class="text-muted mb-0">Aún no hay mensajes.</p>
-                {% endfor %}
-
-                {% if puede_comentar %}
-                    <form method="post" action="{% url 'comentar_ticket' ticket.pk %}" class="mt-3">
-                        {% csrf_token %}
-                        <textarea
-                            name="contenido"
-                            class="form-control mb-2"
-                            rows="3"
-                            maxlength="2000"
-                            required
-                            placeholder="Escribe un mensaje..."
-                        ></textarea>
-                        {% if user.es_personal %}
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" name="interno" id="interno">
-                                <label class="form-check-label small" for="interno">
-                                    Nota interna (el solicitante no la ve)
-                                </label>
-                            </div>
-                        {% endif %}
-                        <button type="submit" class="btn btn-primary btn-sm">Enviar mensaje</button>
-                    </form>
-                {% endif %}
-            </div>
-        </div>
-
-        <h5>Historial de actividad</h5>
-
-        <ul class="list-group mb-3">
-
-            {% for evento in historial %}
-
-                <li class="list-group-item">
-
-                    <div class="d-flex justify-content-between">
-                        <strong>{{ evento.get_tipo_display }}</strong>
-                        <small class="text-muted">{{ evento.fecha|date:"d/m/Y H:i" }}</small>
-                    </div>
-
-                    <div>{{ evento.contenido|linebreaksbr }}</div>
-
-                    <small class="text-muted">por {{ evento.usuario }}</small>
-
-                </li>
-
-            {% empty %}
-
-                <li class="list-group-item text-muted">Sin actividad todavía.</li>
-
-            {% endfor %}
-
-            </ul>
+        {% include "tickets/_historial.html" %}
 
     </div>
 
-    {% if form_gestion %}
+    <div class="col-lg-4">
 
-        <div class="col-md-5">
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-body">
+                <h6 class="card-title mb-3">
+                    <i class="bi bi-info-circle me-1"></i>Detalles
+                </h6>
+
+                <dl class="row small mb-0">
+                    <dt class="col-5 text-muted fw-normal">Sucursal</dt>
+                    <dd class="col-7 mb-2">{{ ticket.sucursal|default:"—" }}</dd>
+
+                    <dt class="col-5 text-muted fw-normal">Área</dt>
+                    <dd class="col-7 mb-2">{{ ticket.area|default:"—" }}</dd>
+
+                    <dt class="col-5 text-muted fw-normal">Asignado a</dt>
+                    <dd class="col-7 mb-2">{{ ticket.asignado_a|default:"Sin asignar" }}</dd>
+
+                    {% if form_gestion %}
+                        <dt class="col-5 text-muted fw-normal">Prioridad</dt>
+                        <dd class="col-7 mb-2">
+                            {% include "tickets/_prioridad_badge.html" %}
+                            {% if ticket.sla_vence_en %}
+                                <div class="text-muted">
+                                    Vence {{ ticket.sla_vence_en|date:"d/m/Y H:i" }}
+                                    {% if ticket.sla_vencido %}
+                                        <span class="badge bg-danger">SLA vencido</span>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </dd>
+                    {% endif %}
+
+                    {% if ticket.numero_serie %}
+                        <dt class="col-5 text-muted fw-normal">Núm. de serie</dt>
+                        <dd class="col-7 mb-2">{{ ticket.numero_serie }}</dd>
+                    {% endif %}
+
+                    <dt class="col-5 text-muted fw-normal">Creado por</dt>
+                    <dd class="col-7 mb-2">
+                        {{ ticket.creado_por }}
+                        <div class="text-muted">{{ ticket.creado_en|date:"d/m/Y H:i" }}</div>
+                    </dd>
+
+                    {% if ticket.resuelto_por %}
+                        <dt class="col-5 text-muted fw-normal">Resuelto por</dt>
+                        <dd class="col-7 mb-2">{{ ticket.resuelto_por }}</dd>
+                    {% endif %}
+
+                    {% if ticket.cerrado_en %}
+                        <dt class="col-5 text-muted fw-normal">Cerrado el</dt>
+                        <dd class="col-7 mb-2">{{ ticket.cerrado_en|date:"d/m/Y H:i" }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+
+        {% if not form_gestion %}
+            {% include "tickets/_conversacion.html" %}
+        {% endif %}
+
+        {% if form_gestion %}
 
             {% if puede_tomar %}
-            <div class="card mb-3">
-                <div class="card-body">
-                    <form method="post" action="{% url 'tomar_ticket' ticket.pk %}">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-success w-100">
-                            Tomar este ticket
-                        </button>
-                    </form>
-                </div>
-            </div>
-            {% endif %}
-
-            {% if form_asignar %}
-            <div class="card mb-3">
-                <div class="card-body">
-                    <h5 class="card-title">Asignar ticket</h5>
-                    <form method="post" action="{% url 'asignar_ticket' ticket.pk %}">
-                        {% csrf_token %}
-                        {% include "_form_fields.html" with form=form_asignar %}
-                        <button type="submit" class="btn btn-outline-primary w-100">
-                            Guardar asignación
-                        </button>
-                    </form>
-                </div>
-            </div>
-            {% endif %}
-
-            <div class="card">
-
-                <div class="card-body">
-
-                    <h5 class="card-title">Gestionar ticket</h5>
-
-                    <form method="post">
-
-                        {% csrf_token %}
-
-                        {% include "_form_fields.html" with form=form_gestion %}
-
-                        <button
-                            type="submit"
-                            name="guardar_gestion"
-                            value="1"
-                            class="btn btn-primary w-100"
-                        >
-                            Guardar cambios
-                        </button>
-
-                    </form>
-
-                    {% if user.es_admin and ticket.estado == "POR_CONFIRMAR" %}
-                        <hr>
-                        <p class="small text-muted mb-2">
-                            ¿El usuario no responde? Puedes forzar el cierre, pero debes
-                            justificarlo; quedará registrado en el historial.
-                        </p>
-                        <form
-                            method="post"
-                            action="{% url 'forzar_cierre' ticket.pk %}"
-                            onsubmit="return confirm('¿Cerrar el ticket sin la confirmación del usuario?');"
-                        >
+                <div class="card shadow-sm border-0 mb-3">
+                    <div class="card-body">
+                        <form method="post" action="{% url 'tomar_ticket' ticket.pk %}">
                             {% csrf_token %}
-                            <label for="justificacion" class="form-label small">Justificación del cierre *</label>
-                            <textarea name="justificacion" id="justificacion" class="form-control form-control-sm mb-2" rows="3" minlength="10" maxlength="1000" required></textarea>
-                            <button type="submit" class="btn btn-outline-danger btn-sm w-100">
-                                Forzar cierre
+                            <button type="submit" class="btn btn-success w-100">
+                                Tomar este ticket
                             </button>
                         </form>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="card shadow-sm border-0 mb-3 panel-acciones">
+
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <ul class="nav nav-pills nav-fill small" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" type="button" role="tab"
+                                    data-bs-toggle="pill" data-bs-target="#tab-gestionar">
+                                Gestionar
+                            </button>
+                        </li>
+                        {% if form_asignar %}
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" type="button" role="tab"
+                                        data-bs-toggle="pill" data-bs-target="#tab-asignar">
+                                    Asignar
+                                </button>
+                            </li>
+                        {% endif %}
+                        {% if form_escalar %}
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" type="button" role="tab"
+                                        data-bs-toggle="pill" data-bs-target="#tab-escalar">
+                                    Escalar
+                                </button>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <div class="card-body tab-content">
+
+                    <div class="tab-pane fade show active" id="tab-gestionar" role="tabpanel">
+                        <form method="post">
+                            {% csrf_token %}
+                            {% include "_form_fields.html" with form=form_gestion %}
+                            <button
+                                type="submit"
+                                name="guardar_gestion"
+                                value="1"
+                                class="btn btn-primary w-100"
+                            >
+                                Guardar cambios
+                            </button>
+                        </form>
+
+                        {% if user.es_admin and ticket.estado == "POR_CONFIRMAR" %}
+                            <details class="mt-3">
+                                <summary class="small text-danger" style="cursor: pointer;">
+                                    Forzar cierre sin confirmación del usuario
+                                </summary>
+                                <p class="small text-muted mt-2 mb-2">
+                                    Debes justificarlo; queda registrado en el historial.
+                                </p>
+                                <form
+                                    method="post"
+                                    action="{% url 'forzar_cierre' ticket.pk %}"
+                                    onsubmit="return confirm('¿Cerrar el ticket sin la confirmación del usuario?');"
+                                >
+                                    {% csrf_token %}
+                                    <label for="justificacion" class="form-label small">Justificación del cierre *</label>
+                                    <textarea name="justificacion" id="justificacion" class="form-control form-control-sm mb-2" rows="3" minlength="10" maxlength="1000" required></textarea>
+                                    <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                                        Forzar cierre
+                                    </button>
+                                </form>
+                            </details>
+                        {% endif %}
+                    </div>
+
+                    {% if form_asignar %}
+                        <div class="tab-pane fade" id="tab-asignar" role="tabpanel">
+                            <form method="post" action="{% url 'asignar_ticket' ticket.pk %}">
+                                {% csrf_token %}
+                                {% include "_form_fields.html" with form=form_asignar %}
+                                <button type="submit" class="btn btn-outline-primary w-100">
+                                    Guardar asignación
+                                </button>
+                            </form>
+                        </div>
+                    {% endif %}
+
+                    {% if form_escalar %}
+                        <div class="tab-pane fade" id="tab-escalar" role="tabpanel">
+                            <p class="small text-muted">
+                                Pasa el ticket a un superadmin. El motivo lo ve solo el personal.
+                            </p>
+                            <form method="post" action="{% url 'escalar_ticket' ticket.pk %}">
+                                {% csrf_token %}
+                                {% include "_form_fields.html" with form=form_escalar %}
+                                <button type="submit" class="btn btn-outline-warning w-100">
+                                    Escalar ticket
+                                </button>
+                            </form>
+                        </div>
                     {% endif %}
 
                 </div>
-
             </div>
 
-        </div>
+        {% endif %}
 
-    {% endif %}
+    </div>
 
 </div>
 

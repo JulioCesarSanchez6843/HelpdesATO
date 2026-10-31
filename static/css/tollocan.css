@@ -646,6 +646,22 @@ a > .card:hover {
     filter: invert(var(--barra-invertir));
 }
 
+.mascota-flotante {
+    display: block;
+    max-width: 100%;
+    filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.18));
+    animation: mascota-flotar 4s ease-in-out infinite;
+}
+
+@keyframes mascota-flotar {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mascota-flotante { animation: none; }
+}
+
 .vista-previa-barra {
     --vp-barra: #2f2f2f;
     --vp-texto: #ffffff;

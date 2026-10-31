@@ -7,6 +7,7 @@ class Evento(models.Model):
         TICKET_CREADO = "TICKET_CREADO", "Ticket creado"
         TICKET_TOMADO = "TICKET_TOMADO", "Ticket tomado"
         TICKET_ASIGNADO = "TICKET_ASIGNADO", "Ticket asignado"
+        TICKET_ESCALADO = "TICKET_ESCALADO", "Ticket escalado"
         TICKET_ESTADO = "TICKET_ESTADO", "Cambio de estado"
         TICKET_CATEGORIA = "TICKET_CATEGORIA", "Cambio de categoría"
         TICKET_RESUELTO = "TICKET_RESUELTO", "Ticket resuelto"

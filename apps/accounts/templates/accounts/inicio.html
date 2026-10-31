@@ -1,366 +1,125 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block content %}
 
 {% url 'lista_tickets' as url_tickets %}
 
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" rel="stylesheet">
-
 <style>
-    .libreta { max-width: 1000px; margin: 0 auto 2rem; }
-    .libreta-pestanas { display: flex; gap: 4px; padding: 0 1rem 0 4rem; overflow-x: auto; scrollbar-width: none; }
-    .libreta-pestanas::-webkit-scrollbar { display: none; }
-    .pestana { flex: 0 0 auto; display: inline-flex; align-items: center; gap: .4rem; border: 0; border-top: 3px solid transparent; background: #e8e2d2; color: #5b5648; font-size: .85rem; font-weight: 600; padding: .45rem .9rem; margin-top: 6px; margin-bottom: -1px; border-radius: 10px 10px 0 0; transition: background .15s, margin .15s; }
-    .pestana:hover { background: #f1ecdd; }
-    .pestana.activa { background: #fffdf7; color: #2b2b2b; border-top-color: var(--tollocan-rojo); margin-top: 0; padding-bottom: .6rem; position: relative; z-index: 2; }
-    .pestana-aviso { background: var(--tollocan-rojo); color: #fff; border-radius: 999px; font-size: .7rem; line-height: 1.3; padding: 0 .45rem; }
+    .inicio { max-width: 960px; margin: 0 auto 2rem; }
+    .inicio-hero { display: flex; align-items: center; gap: 2rem; padding: 1.5rem 2rem; background: #fff; border-radius: 1rem; border-top: 4px solid var(--tollocan-rojo); box-shadow: 0 1px 3px rgba(16, 24, 40, .08), 0 8px 24px rgba(16, 24, 40, .06); }
+    .inicio-mascota { flex: 0 0 auto; width: 220px; height: auto; }
+    .inicio-texto { flex: 1 1 auto; min-width: 0; }
+    .inicio-fecha { color: #6c757d; font-size: .9rem; }
+    .inicio-fecha::first-letter { text-transform: uppercase; }
+    .inicio-saludo { margin: .15rem 0 .1rem; font-size: 1.9rem; font-weight: 700; line-height: 1.2; color: var(--tollocan-rojo); }
+    .inicio-rol { margin-bottom: 1rem; color: #6c757d; }
+    .inicio-burbuja { position: relative; margin-bottom: 1.1rem; padding: .9rem 1.1rem; background: #f4f6fa; border-radius: .9rem; font-size: 1.05rem; }
+    .inicio-burbuja::before { content: ""; position: absolute; top: -8px; left: 1.5rem; width: 16px; height: 16px; background: #f4f6fa; transform: rotate(45deg); }
+    .inicio-acciones { display: flex; flex-wrap: wrap; gap: .5rem; }
 
-    .libreta-papel { position: relative; overflow: hidden; background-color: #fffdf7; background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, #e6dfcc 31px, #e6dfcc 32px); padding: 32px 32px 32px 92px; min-height: 480px; border-radius: 4px 14px 14px 4px; box-shadow: 0 1px 1px rgba(0, 0, 0, .08), 0 8px 24px rgba(0, 0, 0, .12), 4px 4px 0 -1px #f6f2e6, 8px 8px 0 -2px #eae5d5; }
-    .libreta-papel::before { content: ""; position: absolute; top: 0; bottom: 0; left: 70px; width: 2px; background: #f0b9b9; }
-    .libreta-papel::after { content: ""; position: absolute; top: 16px; bottom: 16px; left: 18px; width: 28px; background-image: radial-gradient(circle at 50% 50%, #55524a 0 4px, #8d8878 5px, rgba(0, 0, 0, .12) 7px, transparent 8px); background-size: 28px 64px; background-repeat: repeat-y; }
+    .inicio-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; margin-top: 1.25rem; }
+    .dato { display: flex; flex-direction: column; padding: 1rem 1.2rem; background: #fff; border-left: 5px solid #ced4da; border-radius: .9rem; box-shadow: 0 1px 3px rgba(16, 24, 40, .08); color: #212529; text-decoration: none; transition: transform .15s, box-shadow .15s; }
+    a.dato:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(16, 24, 40, .12); color: #212529; }
+    .dato-valor { font-size: 2.2rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .dato-etiqueta { color: #6c757d; font-size: .9rem; }
+    .dato-danger { border-left-color: #dc3545; }
+    .dato-danger .dato-valor { color: #b42318; }
+    .dato-warning { border-left-color: #ffc107; }
+    .dato-info { border-left-color: #0dcaf0; }
 
-    .hoja { display: none; position: relative; z-index: 1; }
-    .hoja.activa { display: block; transform-origin: left center; animation: pasar-hoja .5s ease-out; }
-    .hoja.activa.atras { animation-name: volver-hoja; }
-    @keyframes pasar-hoja { from { opacity: 0; transform: perspective(1400px) rotateY(-75deg); } to { opacity: 1; transform: perspective(1400px) rotateY(0); } }
-    @keyframes volver-hoja { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: translateX(0); } }
-
-    .hoja-cabecera { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
-    .hoja-fecha { line-height: 32px; color: #7a7360; font-size: .9rem; }
-    .hoja-fecha::first-letter { text-transform: uppercase; }
-    .hoja-titulo { font-family: "Caveat", cursive; font-size: 2.4rem; font-weight: 700; line-height: 64px; margin: 0; color: var(--tollocan-rojo); }
-    .hoja-sub { line-height: 32px; color: #7a7360; }
-    .hoja-nota { line-height: 32px; margin: 0; }
-    .hoja-subtitulo { font-family: "Caveat", cursive; font-size: 1.7rem; font-weight: 700; line-height: 32px; margin: 0; color: #2b2b2b; }
-    .hoja-vacia { line-height: 32px; color: #7a7360; margin: 0; }
-    .hoja-columnas { display: grid; grid-template-columns: 1fr; gap: 0 3rem; }
-    @media (min-width: 768px) { .hoja-columnas.dos { grid-template-columns: 1fr 1fr; } }
-
-    .nota-adhesiva { display: inline-flex; align-items: center; gap: .5rem; height: 64px; margin: 0 0 32px; padding: 0 1.1rem; background: #fff3a3; color: #5a4a00; font-family: "Caveat", cursive; font-size: 1.3rem; font-weight: 700; transform: rotate(-1.5deg); box-shadow: 0 3px 8px rgba(0, 0, 0, .18); }
-    .nota-adhesiva a { color: #8a2a00; }
-
-    .linea-nota { display: flex; align-items: center; gap: .5rem; line-height: 32px; color: #2b2b2b; text-decoration: none; }
-    a.linea-nota:hover .linea-etiqueta { color: var(--tollocan-rojo); }
-    .linea-puntos { flex: 1; align-self: flex-end; height: 0; margin-bottom: 9px; min-width: 1rem; border-bottom: 2px dotted #b9b19b; }
-    .linea-valor { font-weight: 700; font-variant-numeric: tabular-nums; }
-    .linea-danger .linea-valor { color: #b42318; background: linear-gradient(transparent 55%, #ffd1cb 55%); padding: 0 .35rem; }
-    .linea-warning .linea-valor { background: linear-gradient(transparent 55%, #ffe98a 55%); padding: 0 .35rem; }
-    .linea-info .linea-valor { background: linear-gradient(transparent 55%, #c9e5ff 55%); padding: 0 .35rem; }
-
-    .aviso-nota { display: flex; align-items: center; gap: 1rem; margin: 0; }
-    .aviso-boton { flex: 1 1 auto; min-width: 0; background: none; border: 0; padding: 0; text-align: left; line-height: 32px; color: #2b2b2b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+    .inicio-avisos { margin-top: 1.25rem; padding: 1rem 1.2rem; background: #fff; border-radius: .9rem; box-shadow: 0 1px 3px rgba(16, 24, 40, .08); }
+    .inicio-avisos h2 { margin: 0 0 .5rem; font-size: 1rem; font-weight: 700; }
+    .aviso-fila { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 0; }
+    .aviso-boton { flex: 1 1 auto; min-width: 0; padding: .3rem 0; background: none; border: 0; color: #212529; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
     .aviso-boton:hover { color: var(--tollocan-rojo); }
-    .aviso-fecha { flex: 0 0 auto; font-size: .8rem; color: #7a7360; }
-
-    .fila-estado { display: flex; align-items: center; gap: .75rem; line-height: 32px; }
-    .fila-estado .badge { flex: 0 0 12rem; }
-    .fila-persona { display: flex; justify-content: space-between; align-items: center; gap: 1rem; line-height: 32px; }
-    .fila-tabla { display: grid; grid-template-columns: 1fr 70px 90px 90px; align-items: center; gap: .5rem; line-height: 32px; }
-    .fila-tabla > :nth-child(n+2) { text-align: right; }
-    .fila-cabecera { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #7a7360; }
-    .fila-evento { line-height: 32px; display: flex; justify-content: space-between; gap: 1rem; }
-    .fila-evento > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .fila-evento small { color: #7a7360; flex: 0 0 auto; }
-
-    .libreta-pie { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1rem 0 4rem; color: #7a7360; font-size: .85rem; }
+    .aviso-fecha { flex: 0 0 auto; color: #6c757d; font-size: .8rem; }
 
     @media (max-width: 575.98px) {
-        .libreta-papel { padding: 32px 16px 32px 64px; }
-        .libreta-papel::before { left: 48px; }
-        .libreta-papel::after { left: 10px; width: 24px; background-size: 24px 64px; }
-        .libreta-pestanas { padding-left: 2.5rem; }
-        .libreta-pie { padding-left: 2.5rem; }
-        .hoja-cabecera { flex-direction: column; }
-        .fila-estado { flex-wrap: wrap; }
-        .fila-tabla { grid-template-columns: 1fr 52px 72px 72px; font-size: .85rem; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-        .hoja.activa { animation: none; }
+        .inicio-hero { flex-direction: column; text-align: center; padding: 1.25rem 1rem; }
+        .inicio-mascota { width: 170px; }
+        .inicio-acciones { justify-content: center; }
+        .inicio-burbuja::before { left: calc(50% - 8px); }
     }
 </style>
 
-<div class="libreta" id="libreta">
-    <div class="libreta-pestanas"></div>
+<div class="inicio">
 
-    <div class="libreta-papel">
-
-        <section class="hoja activa" data-titulo="Resumen" data-icono="bi-journal-text">
-            <div class="hoja-cabecera">
-                <div>
-                    <div class="hoja-fecha">{% now "l j \d\e F \d\e Y" %}</div>
-                    <h4 class="hoja-titulo">{{ saludo }}, {{ user.nombre }}</h4>
-                    <div class="hoja-sub">{{ user.get_rol_display }}{% if user.sucursal %} · {{ user.sucursal.nombre }}{% endif %}</div>
-                </div>
+    <section class="inicio-hero">
+        <img src="{% static 'img/Mascota.png' %}" alt="Mascota de soporte técnico" class="mascota-flotante inicio-mascota">
+        <div class="inicio-texto">
+            <div class="inicio-fecha">{% now "l j \d\e F \d\e Y" %}</div>
+            <h1 class="inicio-saludo">{{ saludo }}, {{ user.nombre }}</h1>
+            <div class="inicio-rol">{{ user.get_rol_display }}{% if user.sucursal %} · {{ user.sucursal.nombre }}{% endif %}</div>
+            <div class="inicio-burbuja">
+                {% if vista == "usuario" %}
+                    {% if conteos.por_confirmar %}
+                    Tienes {{ conteos.por_confirmar }} ticket{{ conteos.por_confirmar|pluralize }} esperando tu confirmación.
+                    {% elif conteos.activos %}
+                    Tienes {{ conteos.activos }} ticket{{ conteos.activos|pluralize }} en seguimiento.
+                    {% else %}
+                    ¿Algo no funciona? Cuéntanos y te ayudamos.
+                    {% endif %}
+                {% else %}
+                    {% if conteos.vencidos %}
+                    Ojo: {{ conteos.vencidos }} ticket{{ conteos.vencidos|pluralize }} con el SLA vencido.
+                    {% elif conteos.sin_asignar %}
+                    Hay {{ conteos.sin_asignar }} ticket{{ conteos.sin_asignar|pluralize }} sin asignar.
+                    {% else %}
+                    Todo en orden por ahora. ¡Buen trabajo!
+                    {% endif %}
+                {% endif %}
+            </div>
+            <div class="inicio-acciones">
+                {% if vista == "usuario" %}
                 <a href="{% url 'nuevo_ticket' %}" class="btn btn-primary btn-sm">
                     <i class="bi bi-plus-circle me-1"></i>Nuevo ticket
                 </a>
-            </div>
-
-            <p class="hoja-nota">
-                {% if vista == "usuario" %}
-                Desde aquí puedes reportar un problema y darle seguimiento.
-                {% elif vista == "becario" %}
-                Este es el resumen de la atención de tu sucursal.
-                {% elif vista == "encargado" %}
-                Este es el resumen de la operación de tu sucursal.
-                {% else %}
-                Este es el resumen general de todas las sucursales.
                 {% endif %}
-            </p>
+                <a href="{{ url_tickets }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-ticket-perforated me-1"></i>Ver tickets
+                </a>
+            </div>
+        </div>
+    </section>
 
-            {% if vista != "usuario" and conteos.vencidos %}
-            <div class="nota-adhesiva">
-                <span>¡Ojo! {{ conteos.vencidos }} ticket{{ conteos.vencidos|pluralize }} con el SLA vencido.</span>
-                <a href="{{ url_tickets }}">Revisar</a>
-            </div>
-            {% else %}
-            <div style="height: 32px;"></div>
-            {% endif %}
-
-            <div class="hoja-columnas{% if vista == "encargado" or vista == "superadmin" %} dos{% endif %}">
-                <div>
-                    {% if vista == "usuario" %}
-                    <h5 class="hoja-subtitulo">Mis tickets</h5>
-                    {% include "accounts/_linea.html" with url=url_tickets etiqueta="Tickets activos" valor=conteos.activos %}
-                    {% include "accounts/_linea.html" with url=url_tickets filtro="?estado=ABIERTO" etiqueta="Abiertos" valor=conteos.abiertos %}
-                    {% include "accounts/_linea.html" with url=url_tickets filtro="?estado=EN_PROCESO" etiqueta="En proceso" valor=conteos.en_proceso %}
-                    {% include "accounts/_linea.html" with url=url_tickets filtro="?estado=POR_CONFIRMAR" etiqueta="Esperan mi confirmación" valor=conteos.por_confirmar alerta=conteos.por_confirmar tono="info" %}
-                    {% else %}
-                    <h5 class="hoja-subtitulo">Pendientes</h5>
-                    {% if vista == "superadmin" %}
-                    {% include "accounts/_linea.html" with url=url_tickets etiqueta="Tickets activos" valor=conteos.activos %}
-                    {% endif %}
-                    {% include "accounts/_linea.html" with url=url_tickets filtro="?estado=ABIERTO" etiqueta="Sin asignar" valor=conteos.sin_asignar %}
-                    {% if vista != "superadmin" %}
-                    {% include "accounts/_linea.html" with url=url_tickets etiqueta="Asignados a mí" valor=conteos.mios %}
-                    {% endif %}
-                    {% include "accounts/_linea.html" with url=url_tickets filtro="?estado=EN_PROCESO" etiqueta="En proceso" valor=conteos.en_proceso %}
-                    {% include "accounts/_linea.html" with url=url_tickets filtro="?estado=POR_CONFIRMAR" etiqueta="Por confirmar" valor=conteos.por_confirmar %}
-                    {% include "accounts/_linea.html" with url=url_tickets etiqueta="SLA vencido" valor=conteos.vencidos alerta=conteos.vencidos tono="danger" %}
-                    {% endif %}
-                </div>
-
-                {% if vista == "encargado" or vista == "superadmin" %}
-                <div>
-                    <h5 class="hoja-subtitulo">Para vigilar</h5>
-                    {% include "accounts/_linea.html" with url=url_tickets etiqueta="Vencen en menos de 4 h" valor=conteos.por_vencer alerta=conteos.por_vencer tono="warning" %}
-                    {% include "accounts/_linea.html" with url=url_tickets etiqueta="Sin prioridad" valor=conteos.sin_prioridad alerta=conteos.sin_prioridad tono="warning" %}
-                    {% include "accounts/_linea.html" with url=url_tickets etiqueta="Creados hoy" valor=conteos.creados_hoy %}
-                    {% include "accounts/_linea.html" with url=url_tickets etiqueta="Resueltos este mes" valor=conteos.resueltos_mes %}
-                </div>
-                {% endif %}
-            </div>
-        </section>
-
-        <section class="hoja" data-titulo="Avisos" data-icono="bi-bell"{% if notificaciones_sin_leer %} data-aviso="{{ notificaciones_sin_leer }}"{% endif %}>
-            <h4 class="hoja-titulo">Avisos</h4>
-            {% for n in pendientes %}
-            <form method="post" action="{% url 'abrir_notificacion' n.pk %}" class="aviso-nota">
-                {% csrf_token %}
-                <button type="submit" class="aviso-boton">{{ n.mensaje|truncatechars:90 }}</button>
-                <span class="aviso-fecha">{{ n.creada_en|date:"d/m H:i" }}</span>
-            </form>
-            {% empty %}
-            <p class="hoja-vacia">No tienes avisos pendientes.</p>
-            {% endfor %}
-            <div style="height: 32px;"></div>
-            <a href="{% url 'lista_notificaciones' %}" class="text-decoration-none">Ver todas las notificaciones</a>
-        </section>
-
-        {% if vista == "usuario" or vista == "becario" %}
-        <section class="hoja" data-titulo="Estados" data-icono="bi-list-check">
-            <h4 class="hoja-titulo">Estados de un ticket</h4>
-            <div class="fila-estado">
-                <span class="badge bg-primary-subtle text-primary-emphasis">Abierto</span>
-                <span>Recibido y esperando atención.</span>
-            </div>
-            <div class="fila-estado">
-                <span class="badge bg-warning-subtle text-warning-emphasis">En proceso</span>
-                <span>Alguien del equipo ya trabaja en él.</span>
-            </div>
-            <div class="fila-estado">
-                <span class="badge bg-secondary-subtle text-secondary-emphasis">En espera de materiales</span>
-                <span>Se necesita material para continuar.</span>
-            </div>
-            <div class="fila-estado">
-                <span class="badge bg-info-subtle text-info-emphasis">Por confirmar</span>
-                <span>Resuelto, falta confirmación de quien lo creó.</span>
-            </div>
-            <div class="fila-estado">
-                <span class="badge bg-success-subtle text-success-emphasis">Cerrado</span>
-                <span>El ticket terminó.</span>
-            </div>
-            {% if vista == "usuario" %}
-            <div style="height: 32px;"></div>
-            <p class="hoja-nota">Puedes reabrir un ticket cerrado hasta {{ reabrir_dias }} días después de su cierre.</p>
-            {% endif %}
-        </section>
+    <section class="inicio-datos">
+        {% if vista == "usuario" %}
+        {% include "accounts/_tarjeta_dato.html" with url=url_tickets etiqueta="Tickets activos" valor=conteos.activos %}
+        {% include "accounts/_tarjeta_dato.html" with url=url_tickets filtro="?estado=EN_PROCESO" etiqueta="En proceso" valor=conteos.en_proceso %}
+        {% include "accounts/_tarjeta_dato.html" with url=url_tickets filtro="?estado=POR_CONFIRMAR" etiqueta="Esperan mi confirmación" valor=conteos.por_confirmar alerta=conteos.por_confirmar tono="info" %}
+        {% elif vista == "becario" %}
+        {% include "accounts/_tarjeta_dato.html" with url=url_tickets etiqueta="Asignados a mí" valor=conteos.mios %}
+        {% include "accounts/_tarjeta_dato.html" with url=url_tickets filtro="?estado=ABIERTO" etiqueta="Sin asignar" valor=conteos.sin_asignar alerta=conteos.sin_asignar tono="warning" %}
+        {% include "accounts/_tarjeta_dato.html" with url=url_tickets filtro="?estado=EN_PROCESO" etiqueta="En proceso" valor=conteos.en_proceso %}
+        {% include "accounts/_tarjeta_dato.html" with url=url_tickets etiqueta="SLA vencido" valor=conteos.vencidos alerta=conteos.vencidos tono="danger" %}
+        {% elif vista == "encargado" %}
+        {% include "accounts/_tarjeta_dato.html" with url=url_tickets filtro="?estado=ABIERTO" etiqueta="Sin asignar" valor=conteos.sin_asignar alerta=conteos.sin_asignar tono="warning" %}
+        {% include "accounts/_tarjeta_dato.html" with url=url_tickets etiqueta="SLA vencido" valor=conteos.vencidos alerta=conteos.vencidos tono="danger" %}
+        {% include "accounts/_tarjeta_dato.html" with url=url_tickets etiqueta="Vencen en menos de 4 h" valor=conteos.por_vencer alerta=conteos.por_vencer tono="warning" %}
+        {% include "accounts/_tarjeta_dato.html" with url=url_tickets etiqueta="Creados hoy" valor=conteos.creados_hoy %}
+        {% else %}
+        {% include "accounts/_tarjeta_dato.html" with url=url_tickets etiqueta="Tickets activos" valor=conteos.activos %}
+        {% include "accounts/_tarjeta_dato.html" with url=url_tickets filtro="?estado=ABIERTO" etiqueta="Sin asignar" valor=conteos.sin_asignar alerta=conteos.sin_asignar tono="warning" %}
+        {% include "accounts/_tarjeta_dato.html" with url=url_tickets etiqueta="SLA vencido" valor=conteos.vencidos alerta=conteos.vencidos tono="danger" %}
+        {% include "accounts/_tarjeta_dato.html" with etiqueta="Correos con error" valor=correos.errores alerta=correos.errores tono="danger" %}
         {% endif %}
+    </section>
 
-        {% if vista == "encargado" %}
-        <section class="hoja" data-titulo="Equipo" data-icono="bi-people">
-            <h4 class="hoja-titulo">Carga del equipo</h4>
-            {% for p in equipo %}
-            <div class="fila-persona">
-                <span><strong>{{ p.nombre }}</strong> <small class="text-muted">{{ p.get_rol_display }}</small></span>
-                <span>
-                    <span class="badge bg-primary-subtle text-primary-emphasis">{{ p.activos }} activo{{ p.activos|pluralize }}</span>
-                    {% if p.vencidos %}<span class="badge bg-danger">{{ p.vencidos }} vencido{{ p.vencidos|pluralize }}</span>{% endif %}
-                </span>
-            </div>
-            {% empty %}
-            <p class="hoja-vacia">No hay personal activo en tu sucursal.</p>
-            {% endfor %}
-        </section>
-        {% endif %}
+    {% if pendientes %}
+    <section class="inicio-avisos">
+        <h2><i class="bi bi-bell me-1"></i>Avisos pendientes</h2>
+        {% for n in pendientes|slice:":3" %}
+        <form method="post" action="{% url 'abrir_notificacion' n.pk %}" class="aviso-fila">
+            {% csrf_token %}
+            <button type="submit" class="aviso-boton">{{ n.mensaje|truncatechars:90 }}</button>
+            <span class="aviso-fecha">{{ n.creada_en|date:"d/m H:i" }}</span>
+        </form>
+        {% endfor %}
+        <a href="{% url 'lista_notificaciones' %}" class="small text-decoration-none">Ver todas las notificaciones</a>
+    </section>
+    {% endif %}
 
-        {% if vista == "superadmin" %}
-        <section class="hoja" data-titulo="Sucursales" data-icono="bi-building">
-            <h4 class="hoja-titulo">Resumen por sucursal</h4>
-            <div class="fila-tabla fila-cabecera">
-                <span>Sucursal</span><span>Activos</span><span>Sin asignar</span><span>SLA vencido</span>
-            </div>
-            {% for s in por_sucursal %}
-            <div class="fila-tabla">
-                <a href="{{ url_tickets }}?sucursal={{ s.pk }}" class="text-decoration-none">{{ s.nombre }}</a>
-                <span>{{ s.activos }}</span>
-                <span>{{ s.sin_asignar }}</span>
-                <span class="{% if s.vencidos %}text-danger fw-bold{% endif %}">{{ s.vencidos }}</span>
-            </div>
-            {% empty %}
-            <p class="hoja-vacia">No hay sucursales activas.</p>
-            {% endfor %}
-        </section>
-
-        <section class="hoja" data-titulo="Sistema" data-icono="bi-sliders">
-            <h4 class="hoja-titulo">Sistema</h4>
-            {% include "accounts/_linea.html" with etiqueta="Cierre automático" valor=sistema.cierre_automatico_activo|yesno:"Activo,Inactivo" %}
-            {% include "accounts/_linea.html" with etiqueta="Última ejecución" valor=sistema.ultima_ejecucion|date:"d/m/Y H:i"|default:"Nunca" %}
-            {% include "accounts/_linea.html" with etiqueta="Errores en la última ejecución" valor=sistema.ultima_ejecucion_errores alerta=sistema.ultima_ejecucion_errores tono="danger" %}
-            {% include "accounts/_linea.html" with etiqueta="Correos en cola" valor=correos.pendientes %}
-            {% include "accounts/_linea.html" with etiqueta="Correos con error" valor=correos.errores alerta=correos.errores tono="danger" %}
-            <div style="height: 32px;"></div>
-            <h5 class="hoja-subtitulo">Usuarios activos</h5>
-            {% include "accounts/_linea.html" with etiqueta="Total" valor=personas.total %}
-            {% include "accounts/_linea.html" with etiqueta="Encargados" valor=personas.encargados %}
-            {% include "accounts/_linea.html" with etiqueta="Becarios" valor=personas.becarios %}
-            {% include "accounts/_linea.html" with etiqueta="Usuarios" valor=personas.usuarios %}
-            <div style="height: 32px;"></div>
-            <a href="{% url 'configuracion_sistema' %}" class="text-decoration-none">Parámetros del sistema</a>
-            ·
-            <a href="{% url 'lista_usuarios' %}" class="text-decoration-none">Gestionar usuarios</a>
-        </section>
-        {% endif %}
-
-        {% if vista == "encargado" or vista == "superadmin" %}
-        <section class="hoja" data-titulo="Actividad" data-icono="bi-clock-history">
-            <h4 class="hoja-titulo">Actividad reciente</h4>
-            {% for e in actividad %}
-            <div class="fila-evento">
-                <span>{{ e.get_tipo_display }}{% if e.ticket_numero %} #{{ e.ticket_numero }}{% endif %} · {{ e.actor_nombre }}{% if vista == "superadmin" and e.sucursal %} · {{ e.sucursal.nombre }}{% endif %}</span>
-                <small>{{ e.creado_en|date:"d/m H:i" }}</small>
-            </div>
-            {% empty %}
-            <p class="hoja-vacia">Sin actividad registrada.</p>
-            {% endfor %}
-            <div style="height: 32px;"></div>
-            <a href="{% url 'actividad' %}" class="text-decoration-none">Ver toda la actividad</a>
-        </section>
-        {% endif %}
-
-        <section class="hoja" data-titulo="Tiempos de atención" data-icono="bi-stopwatch">
-            <h4 class="hoja-titulo">Tiempos de atención</h4>
-            <p class="hoja-nota">Tiempo objetivo de resolución según la prioridad del ticket.</p>
-            <div style="height: 32px;"></div>
-            {% for nombre, horas in sla %}
-            {% include "accounts/_linea.html" with etiqueta=nombre valor=horas unidad=" h" %}
-            {% endfor %}
-        </section>
-    </div>
-
-    <div class="libreta-pie">
-        <button type="button" class="btn btn-sm btn-outline-secondary" data-pasar="-1"><i class="bi bi-chevron-left"></i> Anterior</button>
-        <span class="libreta-contador"></span>
-        <button type="button" class="btn btn-sm btn-outline-secondary" data-pasar="1">Siguiente <i class="bi bi-chevron-right"></i></button>
-    </div>
 </div>
-
-<script>
-    (function () {
-        var libreta = document.getElementById("libreta");
-        if (!libreta) return;
-        var papel = libreta.querySelector(".libreta-papel");
-        var hojas = Array.prototype.slice.call(libreta.querySelectorAll(".hoja"));
-        var barra = libreta.querySelector(".libreta-pestanas");
-        var contador = libreta.querySelector(".libreta-contador");
-        var anterior = libreta.querySelector("[data-pasar='-1']");
-        var siguiente = libreta.querySelector("[data-pasar='1']");
-        var actual = 0;
-
-        var pestanas = hojas.map(function (hoja, i) {
-            var boton = document.createElement("button");
-            boton.type = "button";
-            boton.className = "pestana" + (i === 0 ? " activa" : "");
-            var icono = document.createElement("i");
-            icono.className = "bi " + hoja.dataset.icono;
-            var texto = document.createElement("span");
-            texto.textContent = hoja.dataset.titulo;
-            boton.appendChild(icono);
-            boton.appendChild(texto);
-            if (hoja.dataset.aviso) {
-                var aviso = document.createElement("span");
-                aviso.className = "pestana-aviso";
-                aviso.textContent = hoja.dataset.aviso;
-                boton.appendChild(aviso);
-            }
-            boton.addEventListener("click", function () { ir(i); });
-            barra.appendChild(boton);
-            return boton;
-        });
-
-        function ir(i) {
-            if (i < 0 || i >= hojas.length || i === actual) return;
-            var atras = i < actual;
-            hojas[actual].classList.remove("activa", "atras");
-            pestanas[actual].classList.remove("activa");
-            actual = i;
-            hojas[actual].classList.add("activa");
-            if (atras) hojas[actual].classList.add("atras");
-            pestanas[actual].classList.add("activa");
-            pestanas[actual].scrollIntoView({ block: "nearest", inline: "nearest" });
-            actualizar();
-        }
-
-        function actualizar() {
-            contador.textContent = "Hoja " + (actual + 1) + " de " + hojas.length;
-            anterior.disabled = actual === 0;
-            siguiente.disabled = actual === hojas.length - 1;
-        }
-
-        anterior.addEventListener("click", function () { ir(actual - 1); });
-        siguiente.addEventListener("click", function () { ir(actual + 1); });
-
-        document.addEventListener("keydown", function (e) {
-            var destino = e.target.tagName;
-            if (destino === "INPUT" || destino === "TEXTAREA" || destino === "SELECT") return;
-            if (e.altKey || e.ctrlKey || e.metaKey) return;
-            if (e.key === "ArrowRight") ir(actual + 1);
-            if (e.key === "ArrowLeft") ir(actual - 1);
-        });
-
-        var inicioX = null;
-        papel.addEventListener("touchstart", function (e) {
-            inicioX = e.touches[0].clientX;
-        }, { passive: true });
-        papel.addEventListener("touchend", function (e) {
-            if (inicioX === null) return;
-            var dx = e.changedTouches[0].clientX - inicioX;
-            inicioX = null;
-            if (Math.abs(dx) > 60) ir(actual + (dx < 0 ? 1 : -1));
-        }, { passive: true });
-
-        actualizar();
-    })();
-</script>
 
 {% endblock %}

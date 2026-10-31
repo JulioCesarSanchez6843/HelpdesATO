@@ -1,0 +1,4 @@
+{% if url %}<a href="{{ url }}{{ filtro }}" class="dato{% if alerta %} dato-{{ tono }}{% endif %}">{% else %}<div class="dato{% if alerta %} dato-{{ tono }}{% endif %}">{% endif %}
+    <span class="dato-valor">{{ valor }}</span>
+    <span class="dato-etiqueta">{{ etiqueta }}</span>
+{% if url %}</a>{% else %}</div>{% endif %}

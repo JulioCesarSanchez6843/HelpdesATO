@@ -588,6 +588,48 @@ def enviar_recordatorio_cierre(ticket, cierra_el):
         )
     )
 
+def escalar_ticket(ticket, actor, destino, motivo, prioridad):
+    aplicar_prioridad(ticket, actor, prioridad)
+    ticket.asignado_a = destino
+    ticket.motivo_escalada = motivo
+    ticket.escalado_por = actor
+    ticket.escalado_en = timezone.now()
+    ticket.save(
+        update_fields=[
+            "asignado_a",
+            "motivo_escalada",
+            "escalado_por",
+            "escalado_en",
+        ]
+    )
+
+    texto = (
+        f"Ticket escalado a {destino.nombre} ({destino.get_rol_display()}). "
+        f"Motivo: {motivo}"
+    )
+
+    Historial.objects.create(
+        ticket=ticket,
+        usuario=actor,
+        tipo=Historial.Tipo.ESCALADO,
+        contenido=texto,
+    )
+
+    registrar_evento(
+        Evento.Tipo.TICKET_ESCALADO,
+        actor,
+        ticket=ticket,
+        afectado=destino,
+        detalle=texto,
+    )
+
+    _notificar(
+        [destino],
+        Notificacion.Tipo.TICKET_ESCALADO,
+        f"{actor.nombre} te escaló el ticket #{ticket.pk}: {motivo}",
+        ticket,
+        actor,
+    )
 
 def asignar_ticket(ticket, actor, destino):
     ticket.asignado_a = destino
